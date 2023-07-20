@@ -88,7 +88,7 @@ public class ChannelJoinAliasCommand extends BukkitCommand {
 			}
 			return true;
 		} else {
-			commandSender.sendMessage("You may not use this command as the console!");
+			TownyMessaging.sendMsg("You may not use this command as the console!");
 			return false;
 		}
 	}
