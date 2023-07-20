@@ -466,4 +466,5 @@ v0.107:
   - Remove usage of Version, using new Towny version checker instead.
   - Handle knock-off Essentials plugins fooling TownyChat into hooking the real EssentialsX.
 v0.108:
-  - Fake Release.
+  - Fix help menus not being coloured properly.
+  - Update min. Towny version to 0.99.5.0.
