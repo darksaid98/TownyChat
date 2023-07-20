@@ -80,7 +80,7 @@ public class ChannelCommand extends BaseCommand implements CommandExecutor {
 		} else {
 			// Console
 			for (String line : channel_help) {
-				sender.sendMessage(Colors.strip(line));
+				TownyMessaging.sendMessage(sender, Colors.strip(line));
 				return true;
 			}
 		}
@@ -91,7 +91,7 @@ public class ChannelCommand extends BaseCommand implements CommandExecutor {
 		// So they just type /channel , We should probably send them to the help menu..
 		if (split.length == 0 || split[0].equalsIgnoreCase("help") || split[0].equalsIgnoreCase("?")) { 
 			for (String line : channel_help)
-				player.sendMessage(line);
+				TownyMessaging.sendMessage(player, line);
 		} else if (split[0].equalsIgnoreCase("join")) { // /channel join [chn] (/label args[0] args[1] length = 2.)
 			parseChannelJoin(player, StringMgmt.remFirstArg(split));
 		} else if (split[0].equalsIgnoreCase("leave")) {
@@ -130,7 +130,7 @@ public class ChannelCommand extends BaseCommand implements CommandExecutor {
 	public static void parseChannelMuteList(Player player, String[] split) {
 		if (split.length == 0) {
 			for (String line : channel_help) {
-				player.sendMessage(line);
+				TownyMessaging.sendMessage(player, line);
 			}
 			return;
 		}
@@ -194,7 +194,7 @@ public class ChannelCommand extends BaseCommand implements CommandExecutor {
 	public static void parseChannelMute(Player player, String[] split, boolean mute) {
 		if (split.length < 2) {
 			for (String line : channel_help) {
-				player.sendMessage(line);
+				TownyMessaging.sendMessage(player, line);
 			}
 			return;
 		}
@@ -277,7 +277,7 @@ public class ChannelCommand extends BaseCommand implements CommandExecutor {
 	public static void parseChannelLeave(Player player, String[] split) {
 		if (split.length == 0) {
 			for (String line : channel_help) {
-				player.sendMessage(line);
+				TownyMessaging.sendMessage(player, line);
 			}
 			return;
 		}
@@ -341,7 +341,7 @@ public class ChannelCommand extends BaseCommand implements CommandExecutor {
 	public static void parseChannelJoin(Player player, String[] split) {
 		if (split.length == 0) {
 			for (String line : channel_help) {
-				player.sendMessage(line);
+				TownyMessaging.sendMessage(player, line);
 			}
 			return;
 		}
@@ -390,7 +390,7 @@ public class ChannelCommand extends BaseCommand implements CommandExecutor {
 	public static void parseChannelSoundToggle(Player player, String[] split) {
 		if (split.length == 0) {
 			for (String line : channel_help) {
-				player.sendMessage(line);
+				TownyMessaging.sendMessage(player, line);
 			}
 			return;
 		}

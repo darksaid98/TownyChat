@@ -192,7 +192,7 @@ public class StandardChannel extends Channel {
 	private void trySendingAloneMessage(Player sender, Set<Player> recipients) {
 		if (ChatSettings.isUsingAloneMessage() &&
 				recipients.stream().filter(p -> sender.canSee(p)).count() < 2) // sender will usually be a recipient of their own message.
-			sender.sendMessage(Colors.translateColorCodes(ChatSettings.getUsingAloneMessageString()));
+			TownyMessaging.sendMessage(sender, ChatSettings.getUsingAloneMessageString());
 	}
 
 	private void applyFormats(AsyncPlayerChatEvent event, String originalFormat, String workingFormat, Resident resident) {
@@ -286,7 +286,7 @@ public class StandardChannel extends Channel {
 		// Remove spies who've already seen the message naturally.
 		spies.stream()
 			.filter(spy -> !recipients.contains(spy))
-			.forEach(spy -> spy.sendMessage(format + message));
+			.forEach(spy -> TownyMessaging.sendMessage(spy, format + message));
 	}
 
 	/**

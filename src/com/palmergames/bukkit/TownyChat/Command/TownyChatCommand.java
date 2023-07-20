@@ -43,13 +43,9 @@ public class TownyChatCommand extends BaseCommand implements CommandExecutor {
 	}
 
 	private void parseTownyChatCommand(CommandSender sender, String[] split) {
-		if (split.length == 0) { // So they just type /channel , We should probably send them to the help menu..
+		if (split.length == 0 || split[0].equalsIgnoreCase("help") || split[0].equalsIgnoreCase("?")) {
 			for (String line : townychat_help) {
-				sender.sendMessage(line);
-			}
-		} else if (split[0].equalsIgnoreCase("help") || split[0].equalsIgnoreCase("?")) {
-			for (String line : townychat_help) {
-				sender.sendMessage(line);
+				TownyMessaging.sendMessage(sender, line);
 			}
 		} else if (split[0].equalsIgnoreCase("reload")) {
 			plugin.reload();
