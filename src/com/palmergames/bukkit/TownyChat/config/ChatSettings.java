@@ -265,7 +265,7 @@ public class ChatSettings {
 	}
 	
 	private static String getOrDefault(String configPath, ChatConfigNodes channelNode) {
-		return (String) chatConfig.get(configPath != null ? configPath : channelNode.getDefault());
+		return String.valueOf(chatConfig.get(configPath, channelNode.getDefault()));
 	}
 
 	private static void addWorldFormat(WorldFormat format) {

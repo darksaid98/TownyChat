@@ -468,3 +468,5 @@ v0.107:
 v0.108:
   - Fix help menus not being coloured properly.
   - Update min. Towny version to 0.99.5.0.
+v0.109:
+  - Fix worlds section not generating when per-world is set to true in the chatconfig.yml.
