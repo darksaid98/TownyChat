@@ -8,6 +8,7 @@ import com.palmergames.bukkit.TownyChat.channels.Channel;
 import com.palmergames.bukkit.TownyChat.channels.ChannelsHolder;
 import com.palmergames.bukkit.TownyChat.config.ChatSettings;
 import com.palmergames.bukkit.TownyChat.config.ChannelConfigurationHandler;
+import com.palmergames.bukkit.TownyChat.config.ChannelsSettings;
 import com.palmergames.bukkit.TownyChat.listener.EssentialsDiscordHookListener;
 import com.palmergames.bukkit.TownyChat.listener.TownyChatPlayerListener;
 import com.palmergames.bukkit.TownyChat.tasks.onLoadedTask;
@@ -59,7 +60,7 @@ public class Chat extends JavaPlugin {
 	private DynmapAPI dynMap = null;
 	private Essentials essentials = null;
 	
-	private static String requiredTownyVersion = "0.99.5.0";
+	private static String requiredTownyVersion = "0.100.0.0";
 	public static boolean usingPlaceholderAPI = false;
 	public static boolean usingEssentialsDiscord = false;
 	boolean chatConfigError = false;
@@ -120,7 +121,7 @@ public class Chat extends JavaPlugin {
 	private void loadConfigs() {
 		FileMgmt.checkOrCreateFolders(new String[] { getRootPath(), getTownySettingsPath() });
 		chatConfigError = !ChatSettings.loadCommentedChatConfig();
-		channelsConfigError = !channelsConfig.loadChannels();
+		channelsConfigError = !ChannelsSettings.loadCommentedChannelsConfig();//!channelsConfig.loadChannels();
 	}
 
 	public static Chat getTownyChat() {

@@ -475,3 +475,4 @@ v0.110:
     - The channels in the channels.yml may now be given listenpermission and speakpermission keys, whose values will be the permission node require to either speak or listen to the channel.
     - When these are set on a channel they will make the permission key of the channel redundant and unused.
     - Closes https://github.com/TownyAdvanced/Towny/issues/1020.
+  - Update min. Towny version to 0.100.0.0.
