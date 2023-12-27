@@ -73,8 +73,8 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.github.TownyAdvanced</groupId>
-            <artifactId>Towny</artifactId>
+            <groupId>com.palmergames.bukkit.towny</groupId>
+            <artifactId>towny</artifactId>
             <version>${towny.version}</version>
             <scope>provided</scope>
         </dependency>
