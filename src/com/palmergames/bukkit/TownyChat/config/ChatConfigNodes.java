@@ -80,32 +80,6 @@ public enum ChatConfigNodes {
 			"# #RRGGBB", 
 			"# &#RRGGBB", 
 			"# {#RRGGBB}"),
-			
-	CHANNEL_FORMATS(
-			"channel_formats",
-			"",
-			""),
-	CHANNEL_FORMATS_GLOBAL(
-			"channel_formats.global",
-			"{channelTag} {worldname}{townytagoverride}{townycolor}{permprefix}{group} {townyprefix}{modplayername}{townypostfix}{permsuffix}&f:{msgcolour} {msg}",
-		    "# This is the format which will be used for GLOBAL chat/channels.",
-		    "# This is also the format used when you have modify_chat.enable: true, but use other plugins to handle chat."),
-	CHANNEL_FORMATS_TOWN(
-			"channel_formats.town",
-			"{channelTag} {townycolor}{permprefix}{townyprefix}{playername}{townypostfix}{permsuffix}&f:{msgcolour} {msg}",
-		    "# TOWN channel types."),
-	CHANNEL_FORMATS_NATION(
-			"channel_formats.nation",
-			"{channelTag} {towntagoverride}{townycolor}{permprefix}{townyprefix}{playername}{townypostfix}{permsuffix}&f:{msgcolour} {msg}",
-		    "# NATION channel types."),
-	CHANNEL_FORMATS_ALLIANCE(
-			"channel_formats.alliance",
-			"{channelTag} {towntagoverride}{townycolor}{permprefix}{townyprefix}{playername}{townypostfix}{permsuffix}&f:{msgcolour} {msg}",
-		    "# ALLIANCE channel types."),
-	CHANNEL_FORMATS_DEFAULT(
-			"channel_formats.default",
-			"{channelTag} {permprefix}{playername}{permsuffix}&f:{msgcolour} {msg}",
-		    "# DEFAULT channel types."),
 	TAG_FORMATS(
 			"tag_formats",
 			"",
@@ -174,9 +148,8 @@ public enum ChatConfigNodes {
     		"allow_exclamation_point_to_shout",
     		"true",
     		"",
-    		"# If true players that say !somewords will have their message sent to a global type channel with unlimited range (usually your general chat.)"),
-    WORLDS("worlds","","");
-	
+    		"# If true players that say !somewords will have their message sent to a global type channel with unlimited range (usually your general chat.)");
+
 
 
 	private final String Root;

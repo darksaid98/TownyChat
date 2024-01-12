@@ -5,6 +5,8 @@ import com.palmergames.bukkit.TownyChat.channels.Channel;
 import com.palmergames.bukkit.TownyChat.channels.StandardChannel;
 import com.palmergames.bukkit.TownyChat.channels.channelTypes;
 import com.palmergames.bukkit.config.CommentedConfiguration;
+import com.palmergames.bukkit.towny.TownyUniverse;
+import com.palmergames.bukkit.towny.object.TownyWorld;
 import com.palmergames.util.FileMgmt;
 import com.palmergames.util.StringMgmt;
 
@@ -26,9 +28,9 @@ public class ChannelsSettings {
 	private static final String CHANNELS_ROOT = "Channels";
 	private static CommentedConfiguration channelConfig, newChannelConfig;
 	private final static List<String> DEFAULT_CHANNELS = Arrays.asList("general","town","nation","alliance","admin","mod","local");
-	
+
 	/**
-	 * 
+	 *
 	 * @return true if the channels.yml has loaded. 
 	 * @throws IOException
 	 */
@@ -102,7 +104,7 @@ public class ChannelsSettings {
 			newChannelConfig.createSection(CHANNELS_ROOT);
 			for (String channel : DEFAULT_CHANNELS)
 				newChannelConfig.createSection(CHANNELS_ROOT + "." + channel);
-	
+
 			ConfigurationSection configurationSection = newChannelConfig.getConfigurationSection(CHANNELS_ROOT);
 			configurationSection.set("general", generalDefaults());
 			configurationSection.set("town", townDefaults());
@@ -118,6 +120,8 @@ public class ChannelsSettings {
 		Map<String, Object> channelMap = new LinkedHashMap<>();
 		channelMap.put("commands", "g");
 		channelMap.put("type", "GLOBAL");
+		channelMap.put("format", "{channelTag} {worldname}{townytagoverride}{townycolor}{permprefix}{group} {townyprefix}{modplayername}{townypostfix}{permsuffix}&f:{msgcolour} {msg}");
+		channelMap.put("worldformats", new LinkedHashMap<>());
 		channelMap.put("channelTag", "&f[g]");
 		channelMap.put("messagecolour", "&f");
 		channelMap.put("permission", "towny.chat.general");
@@ -131,6 +135,8 @@ public class ChannelsSettings {
 		Map<String, Object> channelMap = new LinkedHashMap<>();
 		channelMap.put("commands", "tc");
 		channelMap.put("type", "TOWN");
+		channelMap.put("format", "{channelTag} {townycolor}{permprefix}{townyprefix}{playername}{townypostfix}{permsuffix}&f:{msgcolour} {msg}");
+		channelMap.put("worldformats", new LinkedHashMap<>());
 		channelMap.put("channelTag", "&f[&3TC&f]");
 		channelMap.put("messagecolour", "&b");
 		channelMap.put("permission", "towny.chat.town");
@@ -143,6 +149,8 @@ public class ChannelsSettings {
 		Map<String, Object> channelMap = new LinkedHashMap<>();
 		channelMap.put("commands", "nc");
 		channelMap.put("type", "NATION");
+		channelMap.put("format", "{channelTag} {towntagoverride}{townycolor}{permprefix}{townyprefix}{playername}{townypostfix}{permsuffix}&f:{msgcolour} {msg}");
+		channelMap.put("worldformats", new LinkedHashMap<>());
 		channelMap.put("channelTag", "&f[&6NC&f]");
 		channelMap.put("messagecolour", "&e");
 		channelMap.put("permission", "towny.chat.nation");
@@ -155,6 +163,8 @@ public class ChannelsSettings {
 		Map<String, Object> channelMap = new LinkedHashMap<>();
 		channelMap.put("commands", "ac");
 		channelMap.put("type", "ALLIANCE");
+		channelMap.put("format", "{channelTag} {towntagoverride}{townycolor}{permprefix}{townyprefix}{playername}{townypostfix}{permsuffix}&f:{msgcolour} {msg}");
+		channelMap.put("worldformats", new LinkedHashMap<>());
 		channelMap.put("channelTag", "&f[&2AC&f]");
 		channelMap.put("messagecolour", "&a");
 		channelMap.put("permission", "towny.chat.alliance");
@@ -167,6 +177,8 @@ public class ChannelsSettings {
 		Map<String, Object> channelMap = new LinkedHashMap<>();
 		channelMap.put("commands", "a,admin");
 		channelMap.put("type", "DEFAULT");
+		channelMap.put("format", "{channelTag} {permprefix}{playername}{permsuffix}&f:{msgcolour} {msg}");
+		channelMap.put("worldformats", new LinkedHashMap<>());
 		channelMap.put("channelTag", "&f[&4ADMIN&f]");
 		channelMap.put("messagecolour", "&c");
 		channelMap.put("permission", "towny.chat.admin");
@@ -178,6 +190,8 @@ public class ChannelsSettings {
 		Map<String, Object> channelMap = new LinkedHashMap<>();
 		channelMap.put("commands", "m,mod");
 		channelMap.put("type", "DEFAULT");
+		channelMap.put("format", "{channelTag} {permprefix}{playername}{permsuffix}&f:{msgcolour} {msg}");
+		channelMap.put("worldformats", new LinkedHashMap<>());
 		channelMap.put("channelTag", "&f[&9MOD&f]");
 		channelMap.put("messagecolour", "&5");
 		channelMap.put("permission", "towny.chat.mod");
@@ -189,6 +203,8 @@ public class ChannelsSettings {
 		Map<String, Object> channelMap = new LinkedHashMap<>();
 		channelMap.put("commands", "l,lc");
 		channelMap.put("type", "GLOBAL");
+		channelMap.put("format", "{channelTag} {worldname}{townytagoverride}{townycolor}{permprefix}{group} {townyprefix}{modplayername}{townypostfix}{permsuffix}&f:{msgcolour} {msg}");
+		channelMap.put("worldformats", new LinkedHashMap<>());
 		channelMap.put("channelTag", "&f[local]");
 		channelMap.put("messagecolour", "&f");
 		channelMap.put("permission", "towny.chat.local");
@@ -237,6 +253,8 @@ public class ChannelsSettings {
 		// The following will always be present in some manner
 		channel.setCommands(data.getCommands());
 		channel.setType(channelTypes.valueOf(data.getType()));
+		channel.setFormat(data.getFormat());
+		channel.setWorldFormats(data.getWorldFormats());
 		channel.setRange(data.getRange());
 		channel.setHooked(data.isHooked());
 		channel.setFocusable(data.isFocusable());
@@ -268,7 +286,7 @@ public class ChannelsSettings {
 
 		/**
 		 * Constructor
-		 * 
+		 *
 		 * @param name Channel name
 		 */
 		public ChannelDetails(CommentedConfiguration channelsConfig, String name) {
@@ -303,6 +321,31 @@ public class ChannelsSettings {
 
 		public String getType() {
 			return (String) channelSettingsMap.getOrDefault("type", "DEFAULT");
+		}
+
+		public String getFormat() {
+			return (String) channelSettingsMap.getOrDefault("format", "{channelTag} {worldname}{townytagoverride}{townycolor}{permprefix}{group} {townyprefix}{modplayername}{townypostfix}{permsuffix}&f:{msgcolour} {msg}");
+		}
+
+		public HashMap<String, Channel.WorldFormat> getWorldFormats() {
+			HashMap<String, Channel.WorldFormat> worldFormats = new HashMap<>();
+			if (!ChatSettings.isPer_world())
+				return worldFormats;
+
+			if (!channelSettingsMap.containsKey("worldformats"))
+				return worldFormats;
+
+			for (TownyWorld world : TownyUniverse.getInstance().getTownyWorlds()) {
+				String worldName = world.getName();
+				String path = "worldformats." + worldName;
+				if (channelSettingsMap.containsKey(path)) {
+					worldFormats.put(
+						worldName.toLowerCase(Locale.ROOT),
+                        new Channel.WorldFormat(worldName, (String) channelSettingsMap.getOrDefault(path, getFormat()))
+					);
+				}
+			}
+			return worldFormats;
 		}
 
 		public boolean hasChannelTag() {

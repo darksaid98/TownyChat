@@ -1,27 +1,20 @@
 package com.palmergames.bukkit.TownyChat.config;
 
 import com.palmergames.bukkit.TownyChat.Chat;
-import com.palmergames.bukkit.TownyChat.channels.channelTypes;
 import com.palmergames.bukkit.config.CommentedConfiguration;
 import com.palmergames.bukkit.config.ConfigNodes;
 import com.palmergames.bukkit.towny.TownyUniverse;
 import com.palmergames.bukkit.towny.object.TownyWorld;
 import com.palmergames.util.FileMgmt;
-
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
 
 
 public class ChatSettings {
 
-	private static Map<String, WorldFormat> worldFormatGroups = new HashMap<String, WorldFormat>();
 	private static CommentedConfiguration chatConfig, newChatConfig;
 	
 	/**
@@ -62,9 +55,7 @@ public class ChatSettings {
 			if (root.getComments().length > 0)
 				addComment(root.getRoot(), root.getComments());
 
-			if (root.getRoot() == ChatConfigNodes.WORLDS.getRoot())
-				setWorldDefaults(); // Per-worlds section.
-			else if (root.getRoot() == ChatConfigNodes.VERSION.getRoot())
+			if (root.getRoot() == ChatConfigNodes.VERSION.getRoot())
 				setNewProperty(root.getRoot(), version);
 			else if (root.getRoot() == ChatConfigNodes.LAST_RUN_VERSION.getRoot())
 				setNewProperty(root.getRoot(), getLastRunVersion(version));
@@ -74,31 +65,6 @@ public class ChatSettings {
 		}
 		chatConfig = newChatConfig;
 		newChatConfig = null;
-	}
-	
-	private static void setWorldDefaults() {
-		if (isPer_world()) {
-			for (TownyWorld world : TownyUniverse.getInstance().getTownyWorlds()) {
-				String path = "worlds." + world;
-				if (!chatConfig.contains(path )
-						|| !chatConfig.contains(path + ".global") 
-						|| !chatConfig.contains(path + ".town") 
-						|| !chatConfig.contains(path + ".nation")
-						|| !chatConfig.contains(path + ".alliance")
-						|| !chatConfig.contains(path + ".default")) {
-					newChatConfig.createSection(path);
-					ConfigurationSection worldsection = newChatConfig.getConfigurationSection(path);
-					worldsection.set("global", getOrDefault(path + ".global", ChatConfigNodes.CHANNEL_FORMATS_GLOBAL));
-					worldsection.set("town", getOrDefault(path + ".town", ChatConfigNodes.CHANNEL_FORMATS_TOWN));
-					worldsection.set("nation", getOrDefault(path + ".nation", ChatConfigNodes.CHANNEL_FORMATS_NATION));
-					worldsection.set("alliance", getOrDefault(path + ".alliance", ChatConfigNodes.CHANNEL_FORMATS_ALLIANCE));
-					worldsection.set("default", getOrDefault(path + ".default", ChatConfigNodes.CHANNEL_FORMATS_DEFAULT));
-				}
-			}
-		} else {
-			if (chatConfig.contains(ChatConfigNodes.WORLDS.getRoot()))
-				newChatConfig.set(ChatConfigNodes.WORLDS.getRoot(), chatConfig.get(ChatConfigNodes.WORLDS.getRoot()));
-		}
 	}
 
 	private static void addComment(String root, String... comments) {
@@ -223,119 +189,8 @@ public class ChatSettings {
 	public static String getNomadColour() {
 		return getString(ChatConfigNodes.COLOUR_NOMAD);
 	}
-
-	/*
-	 * Get ChannelType Formats
-	 */
-
-	public static String getChannelFormat(Player player, channelTypes type) {
-		if (isPer_world()) {
-			String worldName = player.getWorld().getName().toLowerCase(Locale.ROOT);
-			if (worldFormatGroups.containsKey(worldName)) {
-				String format = worldFormatGroups.get(worldName).getFormat(type);
-				if (format != null && !format.isEmpty())
-					return format;
-			}
-		}
-		return switch(type) {
-		case GLOBAL, PRIVATE -> getString(ChatConfigNodes.CHANNEL_FORMATS_GLOBAL);
-		case NATION -> getString(ChatConfigNodes.CHANNEL_FORMATS_NATION);
-		case TOWN -> getString(ChatConfigNodes.CHANNEL_FORMATS_TOWN);
-		case ALLIANCE -> getString(ChatConfigNodes.CHANNEL_FORMATS_ALLIANCE);
-		case DEFAULT -> getString(ChatConfigNodes.CHANNEL_FORMATS_DEFAULT);
-		};
-	}
-
-	public static void loadWorldFormats() {
-		if (!isPer_world())
-			return;
-		for (TownyWorld world : TownyUniverse.getInstance().getTownyWorlds()) {
-			String worldName = world.getName();
-			String path = "worlds." + worldName;
-			if (chatConfig.contains(path)) {
-				ChatSettings.WorldFormat worldFormat = new ChatSettings().new WorldFormat(worldName);
-				worldFormat.setGLOBAL(getOrDefault(path + ".global", ChatConfigNodes.CHANNEL_FORMATS_GLOBAL));
-				worldFormat.setDEFAULT(getOrDefault(path + ".default", ChatConfigNodes.CHANNEL_FORMATS_DEFAULT));
-				worldFormat.setTOWN(getOrDefault(path + ".town", ChatConfigNodes.CHANNEL_FORMATS_TOWN));
-				worldFormat.setNATION(getOrDefault(path + ".nation", ChatConfigNodes.CHANNEL_FORMATS_NATION));
-				worldFormat.setALLIANCE(getOrDefault(path + ".alliance", ChatConfigNodes.CHANNEL_FORMATS_ALLIANCE));
-				addWorldFormat(worldFormat);
-			}
-		}
-	}
 	
 	private static String getOrDefault(String configPath, ChatConfigNodes channelNode) {
 		return String.valueOf(chatConfig.get(configPath, channelNode.getDefault()));
-	}
-
-	private static void addWorldFormat(WorldFormat format) {
-		worldFormatGroups.put(format.getName().toLowerCase(Locale.ROOT), format);
-	}
-
-	public class WorldFormat {
-
-		/**
-		 * Constructor
-		 * 
-		 * @param name
-		 */
-		public WorldFormat(String name) {
-			super();
-			this.name = name.toLowerCase();
-		}
-
-		public String getFormat(channelTypes type) {
-			return switch(type) {
-			case GLOBAL, PRIVATE -> GLOBAL;
-			case NATION -> NATION;
-			case TOWN -> TOWN;
-			case ALLIANCE -> ALLIANCE;
-			case DEFAULT -> DEFAULT;
-			};
-		}
-
-		private String name, GLOBAL, TOWN, NATION, ALLIANCE, DEFAULT;
-		
-		/**
-		 * @return the name
-		 */
-		public String getName() {
-			return name;
-		}
-	
-		/**
-		 * @param GLOBAL the GLOBAL format to set
-		 */
-		public void setGLOBAL(String GLOBAL) {
-			this.GLOBAL = GLOBAL;
-		}
-
-		/**
-		 * @param TOWN the TOWN format to set
-		 */
-		public void setTOWN(String TOWN) {
-			this.TOWN = TOWN;
-		}
-
-		/**
-		 * @param NATION the NATION format to set
-		 */
-		public void setNATION(String NATION) {
-			this.NATION = NATION;
-		}
-
-		/**
-		 * @param ALLIANCE the ALLIANCE format to set
-		 */
-		public void setALLIANCE(String ALLIANCE) {
-			this.ALLIANCE = ALLIANCE;
-		}
-
-		/**
-		 * @param DEFAULT the DEFAULT format to set
-		 */
-		public void setDEFAULT(String DEFAULT) {
-			this.DEFAULT = DEFAULT;
-		}
 	}
 }

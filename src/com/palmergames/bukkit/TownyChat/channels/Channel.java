@@ -1,27 +1,26 @@
 package com.palmergames.bukkit.TownyChat.channels;
 
-import java.util.List;
-import java.util.Set;
-import java.util.WeakHashMap;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
-import org.bukkit.entity.Player;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
-
+import com.palmergames.bukkit.TownyChat.config.ChatSettings;
 import com.palmergames.bukkit.towny.TownyMessaging;
 import com.palmergames.bukkit.towny.TownyUniverse;
 import com.palmergames.bukkit.towny.object.Resident;
 import com.palmergames.bukkit.towny.object.Translatable;
 import com.palmergames.bukkit.towny.object.metadata.CustomDataField;
 import com.palmergames.bukkit.towny.object.metadata.StringDataField;
+import org.bukkit.entity.Player;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public abstract class Channel {
 	
 	private String name;
 	private List<String> commands;
 	private channelTypes type;
-	private String channelTag, messageColour, permission, leavePermission, channelSound, listenPermission, speakPermission;
+	private String channelTag, format, messageColour, permission, leavePermission, channelSound, listenPermission, speakPermission;
+	private HashMap<String, WorldFormat> worldFormatGroups = new HashMap<>();
 	private double range;
 	private boolean hooked=false;
 	private boolean autojoin=true;
@@ -64,11 +63,41 @@ public abstract class Channel {
 		return type;
 	}
 	/**
+	 * @return the format
+	 */
+	public String getFormat(Player p) {
+		return ChatSettings.isPer_world() ? getWorldFormat(p) : format;
+	}
+
+	private String getWorldFormat(Player p) {
+		String worldName = p.getWorld().getName().toLowerCase(Locale.ROOT);
+		if (worldFormatGroups.containsKey(worldName)) {
+			return worldFormatGroups.get(worldName).getFormat();
+		}
+		return "";
+	}
+
+	/**
 	 * @param type the type to set
 	 */
 	public void setType(channelTypes type) {
 		this.type = type;
 	}
+
+	/**
+	 * @param format the format to set
+	 */
+	public void setFormat(String format) {
+		this.format = format;
+	}
+
+	/**
+	 * @param worldFormats the worldFormats to set
+	 */
+	public void setWorldFormats(HashMap<String, WorldFormat> worldFormats) {
+		worldFormatGroups = worldFormats;
+	}
+
 	/**
 	 * @return the channelTag
 	 */
@@ -495,5 +524,43 @@ public abstract class Channel {
 		if (!hasListenPermission())
 			return hasPermission(player);
 		return TownyUniverse.getInstance().getPermissionSource().testPermission(player, getListenPermissionNode());
+	}
+
+	public static class WorldFormat {
+		private String name;
+		private String format;
+
+		/**
+		 * Constructor
+		 *
+		 * @param name the world name
+		 */
+		public WorldFormat(String name, String format) {
+			super();
+			this.name = name.toLowerCase();
+			this.format = format;
+		}
+
+		/**
+		 * @return the world name
+		 */
+		public String getName() {
+			return name;
+		}
+
+		/**
+		 * Get the specific format this channel has for this world
+		 * @return format
+		 */
+		public String getFormat() {
+			return format;
+		}
+
+		/**
+		 * @param format the format to set for this world
+		 */
+		public void setFormat(String format) {
+			this.format = format;
+		}
 	}
 }

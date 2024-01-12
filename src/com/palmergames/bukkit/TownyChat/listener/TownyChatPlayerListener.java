@@ -12,9 +12,7 @@ import com.palmergames.bukkit.towny.object.Translatable;
 import com.palmergames.bukkit.towny.object.metadata.StringDataField;
 import com.palmergames.bukkit.towny.utils.MetaDataUtil;
 import com.palmergames.bukkit.util.Colors;
-
 import me.clip.placeholderapi.PlaceholderAPI;
-
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -129,7 +127,7 @@ public class TownyChatPlayerListener implements Listener  {
 			if (resident == null)
 				return;
 			// Nuke the channeltag and message colouring, but apply the remaining format.
-			String format = ChatSettings.getChannelFormat(player, channelTypes.GLOBAL).replace("{channelTag}", "").replace("{msgcolour}", "");
+			String format = plugin.getPlayerChannel(player).getFormat(player).replace("{channelTag}", "").replace("{msgcolour}", "");
 
 			// format is left to store the original non-PAPI-parsed chat format.
 			String newFormat = format;

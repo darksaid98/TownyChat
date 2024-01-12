@@ -68,7 +68,7 @@ public class StandardChannel extends Channel {
 		}
 
 		// Set the channel specific format
-		String format = ChatSettings.getChannelFormat(player, channelType);
+		String format = getFormat(player);
 
 		// Get the list of message recipients.
 		Set<Player> recipients = getRecipients(player, town, nation, channelType, event.getRecipients());
