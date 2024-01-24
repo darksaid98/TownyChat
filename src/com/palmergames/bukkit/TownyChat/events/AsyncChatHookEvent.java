@@ -1,6 +1,8 @@
 package com.palmergames.bukkit.TownyChat.events;
 
+import com.palmergames.bukkit.TownyChat.Chat;
 import com.palmergames.bukkit.TownyChat.channels.Channel;
+import net.kyori.adventure.audience.Audience;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -32,6 +34,7 @@ public class AsyncChatHookEvent extends Event {
 	protected boolean changed;
 	protected Channel channel;
 	protected Set<Player> recipients;
+	protected Audience audience;
 
 	public AsyncChatHookEvent(AsyncPlayerChatEvent event, Channel channel, boolean async) {
 		super(async);
@@ -39,6 +42,7 @@ public class AsyncChatHookEvent extends Event {
 		this.changed = false;
 		this.channel = channel;
 		this.recipients = new HashSet<>(event.getRecipients());
+		this.audience = Audience.audience(getRecipients().stream().map(player -> Chat.getTownyChat().adventure().player(player)).toArray(Audience[]::new));
 	}
 
 	public Channel getChannel() {
@@ -74,6 +78,10 @@ public class AsyncChatHookEvent extends Event {
 	public Set<Player> getRecipients() {
 		return this.recipients;
 	}
+
+	public Audience getAudience() {
+		return this.audience;
+	}
 	
 	public boolean isCancelled() {
 		return event.isCancelled();
@@ -87,6 +95,12 @@ public class AsyncChatHookEvent extends Event {
 		changed = true;
 		this.recipients.clear();
 		this.recipients.addAll(recipients);
+		setAudience(Audience.audience(this.recipients.stream().map(player -> Chat.getTownyChat().adventure().player(player)).toArray(Audience[]::new))); // Update audience as well
+	}
+
+	public void setAudience(Audience audience) {
+		changed = true;
+		this.audience = audience;
 	}
 	
 	public void setFormat(String format) {

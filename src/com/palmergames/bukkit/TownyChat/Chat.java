@@ -1,6 +1,7 @@
 package com.palmergames.bukkit.TownyChat;
 
 import com.earth2me.essentials.Essentials;
+import com.palmergames.adventure.platform.bukkit.BukkitAudiences;
 import com.palmergames.bukkit.TownyChat.Command.ChannelCommand;
 import com.palmergames.bukkit.TownyChat.Command.TownyChatCommand;
 import com.palmergames.bukkit.TownyChat.Command.commandobjects.ChannelJoinAliasCommand;
@@ -27,6 +28,7 @@ import org.bukkit.permissions.Permission;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.dynmap.DynmapAPI;
 
 import java.io.File;
@@ -57,6 +59,7 @@ public class Chat extends JavaPlugin {
 	private Towny towny = null;
 	private DynmapAPI dynMap = null;
 	private Essentials essentials = null;
+	private BukkitAudiences adventure = null;
 	
 	private static String requiredTownyVersion = "0.100.0.0";
 	public static boolean usingPlaceholderAPI = false;
@@ -75,6 +78,7 @@ public class Chat extends JavaPlugin {
 		pm = getServer().getPluginManager();
 		channels = new ChannelsHolder(this);
 		playerChannelMap = new ConcurrentHashMap<>();
+		adventure = BukkitAudiences.create(this);
 		
 		checkPlugins();
 		if (towny == null || !townyVersionCheck()) {
@@ -125,11 +129,22 @@ public class Chat extends JavaPlugin {
 		return chat;
 	}
 
+	public @NonNull BukkitAudiences adventure() {
+		if(this.adventure == null) {
+			throw new IllegalStateException("Tried to access Adventure when the plugin was disabled!");
+		}
+		return this.adventure;
+	}
+
 	@Override
 	public void onDisable() {
 		unregisterPermissions();
 		// reset any handles
 
+		if (adventure != null) {
+			adventure.close();
+			adventure = null;
+		}
 		dynMap = null;
 		towny = null;
 		pm = null;
