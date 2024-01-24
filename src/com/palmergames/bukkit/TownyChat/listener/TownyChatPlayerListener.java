@@ -72,7 +72,7 @@ public class TownyChatPlayerListener implements Listener  {
 		// Check if essentials has this player muted.
 		if (!isEssentialsMuted(player)) {
 			
-			boolean forceGlobal = ChatSettings.isExclamationPoint() ? event.getMessage().startsWith("!") : false;
+			boolean forceGlobal = ChatSettings.isExclamationPoint() && event.getMessage().startsWith("!");
 
 			/*
 			 * If this was directed chat send it via the relevant channel
