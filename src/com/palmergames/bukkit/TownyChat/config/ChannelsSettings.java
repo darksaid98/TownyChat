@@ -19,7 +19,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -39,7 +38,7 @@ public class ChannelsSettings {
 		if (FileMgmt.checkOrCreateFile(filepath)) {
 			File file = new File(filepath);
 
-			// read the config.yml into memory
+			// read the channels.yml into memory
 			channelConfig = new CommentedConfiguration(file.toPath());
 			if (!channelConfig.load()) {
 				Bukkit.getLogger().severe("[TownyChat] Failed to load Channels.yml!");
@@ -93,7 +92,6 @@ public class ChannelsSettings {
 	}
 
 	private static void tryAndSetDefaultChannels() {
-
 		if (channelConfig.contains(CHANNELS_ROOT)) {
 			// There is already a root channels present, not our first run.
 			newChannelConfig.set(CHANNELS_ROOT, channelConfig.get(CHANNELS_ROOT));
@@ -102,18 +100,21 @@ public class ChannelsSettings {
 			Chat.getTownyChat().getLogger().info("TownyChat creating default channels.yml file.");
 
 			newChannelConfig.createSection(CHANNELS_ROOT);
-			for (String channel : DEFAULT_CHANNELS)
-				newChannelConfig.createSection(CHANNELS_ROOT + "." + channel);
+			DEFAULT_CHANNELS.forEach(channel -> newChannelConfig.createSection(CHANNELS_ROOT + "." + channel));
 
-			ConfigurationSection configurationSection = newChannelConfig.getConfigurationSection(CHANNELS_ROOT);
-			configurationSection.set("general", generalDefaults());
-			configurationSection.set("town", townDefaults());
-			configurationSection.set("nation", nationDefaults());
-			configurationSection.set("alliance", allianceDefaults());
-			configurationSection.set("admin", adminDefaults());
-			configurationSection.set("mod", modDefaults());
-			configurationSection.set("local", localDefaults());
+			setConfigSection("general", generalDefaults());
+			setConfigSection("town", townDefaults());
+			setConfigSection("nation", nationDefaults());
+			setConfigSection("alliance", allianceDefaults());
+			setConfigSection("admin", adminDefaults());
+			setConfigSection("mod", modDefaults());
+			setConfigSection("local", localDefaults());
 		}
+	}
+
+	private static void setConfigSection(String section, Map<String,Object> settings) {
+		ConfigurationSection configurationSection = newChannelConfig.getConfigurationSection(CHANNELS_ROOT + "." + section);
+		settings.entrySet().stream().forEach(entry -> configurationSection.set(entry.getKey(), entry.getValue()));
 	}
 
 	private static Map<String, Object> generalDefaults() {
@@ -208,7 +209,6 @@ public class ChannelsSettings {
 		channelMap.put("channelTag", "&f[local]");
 		channelMap.put("messagecolour", "&f");
 		channelMap.put("permission", "towny.chat.local");
-		channelMap.put("default", "true");
 		channelMap.put("range", "100");
 		return channelMap;
 	}
@@ -234,7 +234,7 @@ public class ChannelsSettings {
 		Chat plugin = Chat.getTownyChat();
 
 		channelsKeys.forEach((channelName)-> {
-			Channel channel = new StandardChannel(plugin, channelName.toLowerCase(Locale.ROOT));
+			Channel channel = new StandardChannel(plugin, channelName);
 			loadChannelSettings(channelName, channel);
 			plugin.getChannelsHandler().addChannel(channel);
 		});
@@ -291,7 +291,7 @@ public class ChannelsSettings {
 		 */
 		public ChannelDetails(CommentedConfiguration channelsConfig, String name) {
 			super();
-			this.name = name.toLowerCase(Locale.ROOT);
+			this.name = name;
 			String path = CHANNELS_ROOT + "." + this.name;
 			for (String key : channelsConfig.getConfigurationSection(path).getKeys(true)) {
 				String innerPath = path + "." + key;
