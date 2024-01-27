@@ -20,6 +20,7 @@ import com.palmergames.bukkit.towny.scheduling.impl.FoliaTaskScheduler;
 import com.palmergames.util.FileMgmt;
 import com.palmergames.util.JavaUtil;
 
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandMap;
@@ -60,7 +61,8 @@ public class Chat extends JavaPlugin {
 	private DynmapAPI dynMap = null;
 	private Essentials essentials = null;
 	private BukkitAudiences adventure = null;
-	
+	private MiniMessage miniMessage = null;
+
 	private static String requiredTownyVersion = "0.100.0.0";
 	public static boolean usingPlaceholderAPI = false;
 	public static boolean usingEssentialsDiscord = false;
@@ -79,6 +81,7 @@ public class Chat extends JavaPlugin {
 		channels = new ChannelsHolder(this);
 		playerChannelMap = new ConcurrentHashMap<>();
 		adventure = BukkitAudiences.create(this);
+		miniMessage = MiniMessage.builder().build();
 		
 		checkPlugins();
 		if (towny == null || !townyVersionCheck()) {
@@ -136,6 +139,10 @@ public class Chat extends JavaPlugin {
 		return this.adventure;
 	}
 
+	public @NonNull MiniMessage getMiniMessage() {
+		return miniMessage;
+	}
+
 	@Override
 	public void onDisable() {
 		unregisterPermissions();
@@ -145,6 +152,7 @@ public class Chat extends JavaPlugin {
 			adventure.close();
 			adventure = null;
 		}
+		miniMessage = null;
 		dynMap = null;
 		towny = null;
 		pm = null;
