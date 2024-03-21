@@ -1,62 +1,23 @@
 package com.palmergames.bukkit.TownyChat;
 
-import me.clip.placeholderapi.PlaceholderAPI;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.Context;
-import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.kyori.adventure.text.minimessage.tag.Tag;
-import net.kyori.adventure.text.minimessage.tag.resolver.ArgumentQueue;
-import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
-import net.kyori.adventure.text.minimessage.tag.standard.StandardTags;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import org.bukkit.entity.Player;
-
 import com.palmergames.bukkit.TownyChat.config.ChatSettings;
 import com.palmergames.bukkit.TownyChat.listener.LocalTownyChatEvent;
-import com.palmergames.bukkit.TownyChat.util.StringReplaceManager;
 import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.TownySettings;
+import com.palmergames.bukkit.towny.TownyUniverse;
 import com.palmergames.bukkit.towny.object.Government;
 import com.palmergames.bukkit.towny.object.Nation;
 import com.palmergames.bukkit.towny.object.Resident;
 import com.palmergames.bukkit.towny.object.Town;
-import com.palmergames.bukkit.util.Colors;
 import com.palmergames.util.StringMgmt;
-import com.palmergames.bukkit.towny.TownyUniverse;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.Tag;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import net.kyori.adventure.text.minimessage.tag.standard.StandardTags;
+import org.bukkit.entity.Player;
 
 public class TownyChatFormatter {
-	private static StringReplaceManager<LocalTownyChatEvent> replacer = new StringReplaceManager<LocalTownyChatEvent>();
-
-	static {
-		replacer.registerReplacer("{worldname}", event -> getWorldTag(event));
-		replacer.registerReplacer("{town}", event -> getTownName(event.getResident()));
-		replacer.registerReplacer("{townformatted}", event -> formatTownTag(event.getResident(), false, true));
-		replacer.registerReplacer("{towntag}", event -> formatTownTag(event.getResident(), false, false));
-		replacer.registerReplacer("{towntagoverride}", event -> formatTownTag(event.getResident(), true, false));
-		replacer.registerReplacer("{nation}", event -> getNationName(event.getResident()));
-		replacer.registerReplacer("{nationformatted}", event -> formatNationTag(event.getResident(), false, true));
-		replacer.registerReplacer("{nationtag}", event -> formatNationTag(event.getResident(), false, false));
-		replacer.registerReplacer("{nationtagoverride}", event -> formatNationTag(event.getResident(), true, false));
-		replacer.registerReplacer("{townytag}", event -> formatTownyTag(event.getResident(), false, false));
-		replacer.registerReplacer("{townyformatted}", event -> formatTownyTag(event.getResident(), false, true));
-		replacer.registerReplacer("{townytagoverride}", event -> formatTownyTag(event.getResident(), true, false));
-		replacer.registerReplacer("{title}", event -> getPrefix(event.getResident(), true));
-		replacer.registerReplacer("{surname}", event -> getSuffix(event.getResident(), false));
-		replacer.registerReplacer("{townynameprefix}", event -> getNamePrefix(event.getResident()));
-		replacer.registerReplacer("{townynamepostfix}", event -> getNamePostfix(event.getResident()));
-		replacer.registerReplacer("{townyprefix}", event -> getPrefix(event.getResident(), false));
-		replacer.registerReplacer("{townypostfix}", event -> getSuffix(event.getResident(), false));
-		replacer.registerReplacer("{townycolor}", event -> getTownyColour(event.getResident()));
-		replacer.registerReplacer("{group}", event -> getVaultGroup(event.getEvent().getPlayer()));
-		replacer.registerReplacer("{permprefix}", event -> getVaultPrefixSuffix(event.getResident(), "prefix"));
-		replacer.registerReplacer("{permsuffix}", event -> getVaultPrefixSuffix(event.getResident(), "suffix"));
-		replacer.registerReplacer("{permuserprefix}", event -> getVaultPrefixSuffix(event.getResident(), "userprefix"));
-		replacer.registerReplacer("{permusersuffix}", event -> getVaultPrefixSuffix(event.getResident(), "usersuffix"));
-		replacer.registerReplacer("{permgroupprefix}", event -> getVaultPrefixSuffix(event.getResident(), "groupprefix"));
-		replacer.registerReplacer("{permgroupsuffix}", event -> getVaultPrefixSuffix(event.getResident(), "groupsuffix"));
-		replacer.registerReplacer("{playername}", event -> event.getEvent().getPlayer().getName());
-		replacer.registerReplacer("{primaryresidentrank}", event -> getPrimaryRankPrefix(event.getResident()));
-	}
 	static TagResolver parser(LocalTownyChatEvent event) {
         return TagResolver.resolver(
 				TagResolver.resolver("worldname", Tag.inserting(Component.text(getWorldTag(event)))),
@@ -101,12 +62,11 @@ public class TownyChatFormatter {
 		return miniMessage.deserialize(message);
 	}
 
-	public static String getChatFormat(LocalTownyChatEvent event) {
-		String out = replacer.replaceAll(event.getFormat(), event) // Replace the townychat tags with their values. 
-							 .replace("%", "")                     // Prevent user-inputted tags from breaking chat format. 
-							 .replace("{modplayername}", "%1$s")   // Other plugins will replace this with the DisplayName.
-							 .replace("{msg}", "%2$s");            // Replace the {msg} here so it's not regex parsed.
-		return Colors.translateColorCodes(out);
+	public static TagResolver getChatFormat(LocalTownyChatEvent event) {
+		return TagResolver.builder()
+			.resolver(parser(event))
+			.resolver(StandardTags.defaults())
+			.build();
 	}
 
 	public static String getWorldTag(LocalTownyChatEvent event) {

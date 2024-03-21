@@ -15,6 +15,12 @@ import com.palmergames.bukkit.towny.TownyUniverse;
 import com.palmergames.bukkit.util.Colors;
 
 import me.clip.placeholderapi.PlaceholderAPI;
+import net.kyori.adventure.audience.Audience;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.tag.Tag;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import net.kyori.adventure.text.minimessage.tag.standard.StandardTags;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Sound;
@@ -196,23 +202,40 @@ public class StandardChannel extends Channel {
 	}
 
 	private void applyFormats(AsyncPlayerChatEvent event, String originalFormat, String workingFormat, Resident resident) {
+		List<TagResolver> tagResolvers = new ArrayList<>();
+
 		// Parse out our own channelTag and msgcolour tags.
-		String newFormat = parseTagAndMsgColour(workingFormat);
+		tagResolvers = parseTagAndMsgColour(tagResolvers);
 		// Attempt to apply the new format.
-		catchFormatConversionException(event, originalFormat, newFormat);
+//		catchFormatConversionException(event, originalFormat, newFormat);
 		
 		// Fire the LocalTownyChatEvent.
 		LocalTownyChatEvent chatEvent = new LocalTownyChatEvent(event, resident);
 		// Format the chat line, replacing the TownyChat chat tags.
-		newFormat = TownyChatFormatter.getChatFormat(chatEvent);
+		tagResolvers.add(TownyChatFormatter.getChatFormat(chatEvent));
+//		newFormat = TownyChatFormatter.getChatFormat(chatEvent);
 		// Attempt to apply the new format.
-		catchFormatConversionException(event, originalFormat, newFormat);
+//		catchFormatConversionException(event, originalFormat, newFormat);
+		Component component = Chat.getTownyChat().getMiniMessage().deserialize(workingFormat, tagResolvers.toArray(new TagResolver[0]));
+		Audience.audience(event.getRecipients().stream().map(p -> Chat.getTownyChat().adventure().player(p)).toArray(Audience[]::new)).sendMessage(component);;
+
+		//		event.setFormat(GsonComponentSerializer.gson().serialize(component));
 	}
 
 	private String parseTagAndMsgColour(String format) {
 		return format
 			.replace("{channelTag}", Colors.translateColorCodes(getChannelTag() != null ? getChannelTag() : ""))
 			.replace("{msgcolour}", Colors.translateColorCodes(getMessageColour() != null ? getMessageColour() : ""));
+	}
+
+	private List<TagResolver> parseTagAndMsgColour(List<TagResolver> tagResolvers) {
+		tagResolvers.add(
+			TagResolver.resolver(
+				TagResolver.resolver("channeltag", Tag.inserting(getChannelTag() != null ? Component.text(getChannelTag()) : Component.empty())),
+				TagResolver.resolver("msgcolour", Tag.inserting(getMessageColour() != null ? Component.text(getMessageColour()) : Component.empty()))
+			)
+		);
+		return tagResolvers;
 	}
 
 	private void catchFormatConversionException(AsyncPlayerChatEvent event, String format, String newFormat) {

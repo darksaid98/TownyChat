@@ -63,7 +63,7 @@ public class Chat extends JavaPlugin {
 	private BukkitAudiences adventure = null;
 	private MiniMessage miniMessage = null;
 
-	private static String requiredTownyVersion = "0.100.0.0";
+	private static String requiredTownyVersion = "0.98.0.0";
 	public static boolean usingPlaceholderAPI = false;
 	public static boolean usingEssentialsDiscord = false;
 	boolean chatConfigError = false;

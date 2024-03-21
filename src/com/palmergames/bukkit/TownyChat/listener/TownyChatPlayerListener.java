@@ -13,6 +13,12 @@ import com.palmergames.bukkit.towny.object.metadata.StringDataField;
 import com.palmergames.bukkit.towny.utils.MetaDataUtil;
 import com.palmergames.bukkit.util.Colors;
 import me.clip.placeholderapi.PlaceholderAPI;
+import net.kyori.adventure.audience.Audience;
+import net.kyori.adventure.audience.Audiences;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.tag.Tag;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -21,8 +27,11 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UnknownFormatConversionException;
 import java.util.WeakHashMap;
+import java.util.stream.Collectors;
 
 public class TownyChatPlayerListener implements Listener  {
 	private Chat plugin;
@@ -127,9 +136,16 @@ public class TownyChatPlayerListener implements Listener  {
 			if (resident == null)
 				return;
 			// Nuke the channeltag and message colouring, but apply the remaining format.
-			String format = plugin.getPlayerChannel(player).getFormat(player).replace("{channelTag}", "").replace("{msgcolour}", "");
+			String format = plugin.getPlayerChannel(player).getFormat(player);
 
 			// format is left to store the original non-PAPI-parsed chat format.
+			List<TagResolver> tagResolvers = new ArrayList<>();
+			tagResolvers.add(
+				TagResolver.resolver(
+					TagResolver.resolver("channeltag", Tag.inserting(Component.empty())),
+					TagResolver.resolver("msgcolour", Tag.inserting(Component.empty()))
+				)
+			);
 			String newFormat = format;
 
 			// Parse any PAPI placeholders.
@@ -137,19 +153,24 @@ public class TownyChatPlayerListener implements Listener  {
 				newFormat = PlaceholderAPI.setPlaceholders(player, format);
 
 			// Attempt to apply the new format.
-			catchFormatConversionException(event, format, newFormat);
+//			catchFormatConversionException(event, format, newFormat);
 
 			// Fire the LocalTownyChatEvent.
 			LocalTownyChatEvent chatEvent = new LocalTownyChatEvent(event, resident);
 
 			// Format the chat line, replacing the TownyChat chat tags.
-			newFormat = TownyChatFormatter.getChatFormat(chatEvent);
+			tagResolvers.add(TownyChatFormatter.getChatFormat(chatEvent));
+//			newFormat = TownyChatFormatter.getChatFormat(chatEvent);
 
 			// Attempt to apply the new format.
-			catchFormatConversionException(event, format, newFormat);
+//			catchFormatConversionException(event, format, newFormat);
 
 			// Set the format based on the global channelformat, with channeltag and msgcolour removed.
-			event.setFormat(newFormat);
+//			event.setFormat(newFormat);
+
+			Component component = Chat.getTownyChat().getMiniMessage().deserialize(newFormat, tagResolvers.toArray(new TagResolver[0]));
+			Audience.audience(event.getRecipients().stream().map(p -> Chat.getTownyChat().adventure().player(p)).toArray(Audience[]::new)).sendMessage(component);;
+//			event.setFormat(GsonComponentSerializer.gson().serialize(component));
 		}
 	}
 
