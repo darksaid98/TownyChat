@@ -15,8 +15,10 @@ import com.palmergames.bukkit.util.Colors;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.Tag;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import net.kyori.adventure.audience.Audience;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -24,11 +26,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UnknownFormatConversionException;
-import java.util.WeakHashMap;
+import java.util.*;
 
 public class TownyChatPlayerListener implements Listener {
     public WeakHashMap<Player, String> directedChat = new WeakHashMap<>();
@@ -70,6 +70,9 @@ public class TownyChatPlayerListener implements Listener {
     @EventHandler
     public void onPlayerChat(AsyncChatEvent event) {
         Player player = event.getPlayer();
+        Component message = event.message();
+        Component newMessage = message;
+        String messageString = message.toString();
 
         // TODO START HERE ROOOOOSE :))) This is where the logic "begins"
         // Check if the message contains colour codes we need to remove or parse.
@@ -78,7 +81,7 @@ public class TownyChatPlayerListener implements Listener {
         // Check if essentials has this player muted.
         if (!isEssentialsMuted(player)) {
 
-            boolean forceGlobal = ChatSettings.isExclamationPoint() && event.getMessage().startsWith("!");
+            boolean forceGlobal = ChatSettings.isExclamationPoint() && messageString.startsWith("!");
 
             /*
              * If this was directed chat send it via the relevant channel
@@ -119,7 +122,7 @@ public class TownyChatPlayerListener implements Listener {
                 if (isMutedOrSpam(event, channel, player))
                     return;
                 if (forceGlobal)
-                    event.setMessage(event.getMessage().substring(1));
+                    event.message(Component.text(messageString.substring(1)));
                 channel.chatProcess(event);
                 return;
             }
@@ -134,6 +137,7 @@ public class TownyChatPlayerListener implements Listener {
                 return;
             // Nuke the channeltag and message colouring, but apply the remaining format.
             String format = plugin.getPlayerChannel(player).getFormat(player);
+            String newFormat = format;
 
             // format is left to store the original non-PAPI-parsed chat format.
             List<TagResolver> tagResolvers = new ArrayList<>();
@@ -143,13 +147,12 @@ public class TownyChatPlayerListener implements Listener {
                     TagResolver.resolver("msgcolour", Tag.inserting(Component.empty()))
                 )
             );
-            String newFormat = format;
 
             // Parse any PAPI placeholders.
             if (Chat.usingPlaceholderAPI)
                 newFormat = PlaceholderAPI.setPlaceholders(player, format);
 
-            // Attempt to apply the new format.
+            // Attempt to apply the new format. //TODO potentially reimplement this
 //			catchFormatConversionException(event, format, newFormat);
 
             // Fire the LocalTownyChatEvent.
@@ -157,6 +160,7 @@ public class TownyChatPlayerListener implements Listener {
 
             // Format the chat line, replacing the TownyChat chat tags.
             tagResolvers.add(TownyChatFormatter.getChatFormat(chatEvent));
+            newMessage = MiniMessage.builder().tags(TagResolver.resolver(tagResolvers)).build().deserialize(newFormat);
 //			newFormat = TownyChatFormatter.getChatFormat(chatEvent);
 
             // Attempt to apply the new format.
@@ -167,7 +171,11 @@ public class TownyChatPlayerListener implements Listener {
 
             // The lines below were added by dark
 //			Component component = Chat.getTownyChat().getMiniMessage().deserialize(newFormat, tagResolvers.toArray(new TagResolver[0]));
-//			Audience.audience(event.getRecipients().stream().map(p -> Chat.getTownyChat().adventure().player(p)).toArray(Audience[]::new)).sendMessage(component);;
+// 			Audience.audience(event.getRecipients().stream().map(p -> Chat.getTownyChat().adventure().player(p)).toArray(Audience[]::new)).sendMessage(component);;
+
+            // TODO unsure if this works lol
+            Audience.audience(event.viewers().stream().toArray(Audience[]::new)).sendMessage(newMessage);
+
 //			event.setFormat(GsonComponentSerializer.gson().serialize(component));
         }
     }
@@ -180,32 +188,35 @@ public class TownyChatPlayerListener implements Listener {
      * @param player {@link Player} which has spoken.
      */
     private void testColourCodes(AsyncChatEvent event, Player player) {
-        if ((event.getMessage().contains("&L") || event.getMessage().contains("&l"))
+        Component message = event.message();
+        String messageString = message.toString();
+
+        if ((messageString.contains("&L") || messageString.contains("&l"))
             && !player.hasPermission("townychat.chat.format.bold"))
-            event.setMessage(event.getMessage().replaceAll("&L", "").replaceAll("&l", ""));
+            event.message(Component.text(messageString.replaceAll("&L", "").replaceAll("&l", "")));
 
-        if ((event.getMessage().contains("&O") || event.getMessage().contains("&o"))
+        if ((messageString.contains("&O") || messageString.contains("&o"))
             && !player.hasPermission("townychat.chat.format.italic"))
-            event.setMessage(event.getMessage().replaceAll("&O", "").replaceAll("&o", ""));
+            event.message(Component.text(messageString.replaceAll("&O", "").replaceAll("&o", "")));
 
-        if ((event.getMessage().contains("&K") || event.getMessage().contains("&k"))
+        if ((messageString.contains("&K") || messageString.contains("&k"))
             && !player.hasPermission("townychat.chat.format.magic"))
-            event.setMessage(event.getMessage().replaceAll("&K", "").replaceAll("&k", ""));
+            event.message(Component.text(messageString.replaceAll("&K", "").replaceAll("&k", "")));
 
-        if ((event.getMessage().contains("&N") || event.getMessage().contains("&n"))
+        if ((messageString.contains("&N") || messageString.contains("&n"))
             && !player.hasPermission("townychat.chat.format.underlined"))
-            event.setMessage(event.getMessage().replaceAll("&N", "").replaceAll("&n", ""));
+            event.message(Component.text(messageString.replaceAll("&N", "").replaceAll("&n", "")));
 
-        if ((event.getMessage().contains("&M") || event.getMessage().contains("&m"))
+        if ((messageString.contains("&M") || messageString.contains("&m"))
             && !player.hasPermission("townychat.chat.format.strike"))
-            event.setMessage(event.getMessage().replaceAll("&M", "").replaceAll("&m", ""));
+            event.message(Component.text(messageString.replaceAll("&M", "").replaceAll("&m", "")));
 
-        if ((event.getMessage().contains("&R") || event.getMessage().contains("&r"))
+        if ((messageString.contains("&R") || messageString.contains("&r"))
             && !player.hasPermission("townychat.chat.format.reset"))
-            event.setMessage(event.getMessage().replaceAll("&R", "").replaceAll("&r", ""));
+            event.message(Component.text(messageString.replaceAll("&R", "").replaceAll("&r", "")));
 
         if (player.hasPermission("townychat.chat.color"))
-            event.setMessage(Colors.translateColorCodes(event.getMessage()));
+            event.message(Component.text(Colors.translateColorCodes(messageString)));
     }
 
     /**
