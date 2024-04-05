@@ -7,8 +7,8 @@ import com.palmergames.bukkit.TownyChat.Command.TownyChatCommand;
 import com.palmergames.bukkit.TownyChat.Command.commandobjects.ChannelJoinAliasCommand;
 import com.palmergames.bukkit.TownyChat.channels.Channel;
 import com.palmergames.bukkit.TownyChat.channels.ChannelsHolder;
-import com.palmergames.bukkit.TownyChat.config.ChatSettings;
 import com.palmergames.bukkit.TownyChat.config.ChannelsSettings;
+import com.palmergames.bukkit.TownyChat.config.ChatSettings;
 import com.palmergames.bukkit.TownyChat.listener.EssentialsDiscordHookListener;
 import com.palmergames.bukkit.TownyChat.listener.TownyChatPlayerListener;
 import com.palmergames.bukkit.TownyChat.tasks.onLoadedTask;
@@ -19,7 +19,6 @@ import com.palmergames.bukkit.towny.scheduling.impl.BukkitTaskScheduler;
 import com.palmergames.bukkit.towny.scheduling.impl.FoliaTaskScheduler;
 import com.palmergames.util.FileMgmt;
 import com.palmergames.util.JavaUtil;
-
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -43,291 +42,288 @@ import java.util.concurrent.ConcurrentMap;
 
 /**
  * Chat plugin to manage all Towny chat
- * 
+ * <p>
  * Website: http://code.google.com/a/eclipselabs.org/p/towny/
- * 
+ *
  * @author ElgarL
  */
 
 public class Chat extends JavaPlugin {
 
-	private TownyChatPlayerListener TownyPlayerListener;
-	private ChannelsHolder channels;
-	
-	protected PluginManager pm;
-	private static Chat chat = null;
-	private final Object scheduler;
-	private Towny towny = null;
-	private DynmapAPI dynMap = null;
-	private Essentials essentials = null;
-	private BukkitAudiences adventure = null;
-	private MiniMessage miniMessage = null;
+    public static boolean usingPlaceholderAPI = false;
+    public static boolean usingEssentialsDiscord = false;
+    private static Chat chat = null;
+    private static String requiredTownyVersion = "0.98.0.0";
+    private static ConcurrentMap<UUID, Channel> playerChannelMap;
+    private final Object scheduler;
+    protected PluginManager pm;
+    boolean chatConfigError = false;
+    boolean channelsConfigError = false;
+    private TownyChatPlayerListener TownyPlayerListener;
+    private ChannelsHolder channels;
+    private Towny towny = null;
+    private DynmapAPI dynMap = null;
+    private Essentials essentials = null;
+    private BukkitAudiences adventure = null;
+    private MiniMessage miniMessage = null;
 
-	private static String requiredTownyVersion = "0.98.0.0";
-	public static boolean usingPlaceholderAPI = false;
-	public static boolean usingEssentialsDiscord = false;
-	boolean chatConfigError = false;
-	boolean channelsConfigError = false;
-	private static ConcurrentMap<UUID, Channel> playerChannelMap;
+    public Chat() {
+        chat = this;
+        this.scheduler = townyVersionCheck() ? isFoliaClassPresent() ? new FoliaTaskScheduler(this) : new BukkitTaskScheduler(this) : null;
+    }
 
-	public Chat() {
-		chat = this;
-		this.scheduler = townyVersionCheck() ? isFoliaClassPresent() ? new FoliaTaskScheduler(this) : new BukkitTaskScheduler(this) : null;
-	}
+    public static Chat getTownyChat() {
+        return chat;
+    }
 
-	@Override
-	public void onEnable() {
-		pm = getServer().getPluginManager();
-		channels = new ChannelsHolder(this);
-		playerChannelMap = new ConcurrentHashMap<>();
-		adventure = BukkitAudiences.create(this);
-		miniMessage = MiniMessage.builder().build();
-		
-		checkPlugins();
-		if (towny == null || !townyVersionCheck()) {
-			disableWithMessage("Towny version does not meet required minimum version: " + requiredTownyVersion.toString());
-			return;
-		} else {
-			getLogger().info("Towny version " + towny.getDescription().getVersion() + " found.");
-		}
-		
-		loadConfigs();
-		if (channelsConfigError || chatConfigError) {
-			disableWithMessage("The config could not be loaded.");
-			return;
-		}
-		
-		/*
-		 * This executes the task with a 1 tick delay avoiding the bukkit depends bug.
-		 * TODO: What bug is this referencing? This goes back to the first version of TownyChat.
-		 */
-		getScheduler().run(new onLoadedTask(this));
+    private static boolean isFoliaClassPresent() {
+        try {
+            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
 
-		getCommand("townychat").setExecutor(new TownyChatCommand(this));
-		getCommand("channel").setExecutor(new ChannelCommand(this));
-		registerObjectCommands();
-	}
-	
-	private void disableWithMessage(String message) {
-		getLogger().severe(message);
-		getLogger().severe("Disabling TownyChat...");
-		pm.disablePlugin(this);
-	}
+    @Override
+    public void onEnable() {
+        pm = getServer().getPluginManager();
+        channels = new ChannelsHolder(this);
+        playerChannelMap = new ConcurrentHashMap<>();
+        adventure = BukkitAudiences.create(this);
+        miniMessage = MiniMessage.builder().build();
 
-	private boolean townyVersionCheck() {
-		try {
-			return Towny.isTownyVersionSupported(requiredTownyVersion);
-		} catch (NoSuchMethodError e) {
-			return false;
-		}
-	}
+        checkPlugins();
+        if (towny == null || !townyVersionCheck()) {
+            disableWithMessage("Towny version does not meet required minimum version: " + requiredTownyVersion.toString());
+            return;
+        } else {
+            getLogger().info("Towny version " + towny.getDescription().getVersion() + " found.");
+        }
 
-	private void loadConfigs() {
-		FileMgmt.checkOrCreateFolders(new String[] { getRootPath(), getTownySettingsPath() });
-		chatConfigError = !ChatSettings.loadCommentedChatConfig();
-		channelsConfigError = !ChannelsSettings.loadCommentedChannelsConfig();
-	}
+        loadConfigs();
+        if (channelsConfigError || chatConfigError) {
+            disableWithMessage("The config could not be loaded.");
+            return;
+        }
 
-	public static Chat getTownyChat() {
-		return chat;
-	}
+        /*
+         * This executes the task with a 1 tick delay avoiding the bukkit depends bug.
+         * TODO: What bug is this referencing? This goes back to the first version of TownyChat.
+         */
+        getScheduler().run(new onLoadedTask(this));
 
-	public @NonNull BukkitAudiences adventure() {
-		if(this.adventure == null) {
-			throw new IllegalStateException("Tried to access Adventure when the plugin was disabled!");
-		}
-		return this.adventure;
-	}
+        getCommand("townychat").setExecutor(new TownyChatCommand(this));
+        getCommand("channel").setExecutor(new ChannelCommand(this));
+        registerObjectCommands();
+    }
 
-	public @NonNull MiniMessage getMiniMessage() {
-		return miniMessage;
-	}
+    private void disableWithMessage(String message) {
+        getLogger().severe(message);
+        getLogger().severe("Disabling TownyChat...");
+        pm.disablePlugin(this);
+    }
 
-	@Override
-	public void onDisable() {
-		unregisterPermissions();
-		// reset any handles
+    private boolean townyVersionCheck() {
+        try {
+            return Towny.isTownyVersionSupported(requiredTownyVersion);
+        } catch (NoSuchMethodError e) {
+            return false;
+        }
+    }
 
-		if (adventure != null) {
-			adventure.close();
-			adventure = null;
-		}
-		miniMessage = null;
-		dynMap = null;
-		towny = null;
-		pm = null;
-		
-		channels = null;
-		playerChannelMap = null;
-	}
-	
-	/**
-	 * Perform a reload of this plugin.
-	 */
-	public void reload() {
-		onDisable();
-		onEnable();
-	}
+    private void loadConfigs() {
+        FileMgmt.checkOrCreateFolders(new String[]{getRootPath(), getTownySettingsPath()});
+        chatConfigError = !ChatSettings.loadCommentedChatConfig();
+        channelsConfigError = !ChannelsSettings.loadCommentedChannelsConfig();
+    }
 
-	/**
-	 * Attempt to hook any plugins we want to access.
-	 */
-	private void checkPlugins() {
-		Plugin test;
+    public @NonNull BukkitAudiences adventure() {
+        if (this.adventure == null) {
+            throw new IllegalStateException("Tried to access Adventure when the plugin was disabled!");
+        }
+        return this.adventure;
+    }
 
-		test = pm.getPlugin("Towny");
-		if (test != null && test instanceof Towny)
-			towny = (Towny) test;
+    public @NonNull MiniMessage getMiniMessage() {
+        return miniMessage;
+    }
 
-		test = pm.getPlugin("dynmap");
-		if (test != null && pm.getPlugin("dynmap").isEnabled()) {
-			dynMap = (DynmapAPI) test;
-		}
-		
-		test = pm.getPlugin("PlaceholderAPI");
-		if (test != null) {
-		    usingPlaceholderAPI = true;
-		}
+    @Override
+    public void onDisable() {
+        unregisterPermissions();
+        // reset any handles
 
-		test = pm.getPlugin("EssentialsDiscord");
-		if (test != null) {
-			usingEssentialsDiscord = true;
-		}
+        if (adventure != null) {
+            adventure.close();
+            adventure = null;
+        }
+        miniMessage = null;
+        dynMap = null;
+        towny = null;
+        pm = null;
 
-		test = pm.getPlugin("Essentials");
-		if (test != null && JavaUtil.classExists("com.earth2me.essentials.Essentials")) {
-			this.essentials = (Essentials) test;
-		}
+        channels = null;
+        playerChannelMap = null;
+    }
 
-	}
+    /**
+     * Perform a reload of this plugin.
+     */
+    public void reload() {
+        onDisable();
+        onEnable();
+    }
 
-	public void registerEvents() {
-		
-		if (TownyPlayerListener == null) {
-			TownyPlayerListener = new TownyChatPlayerListener(this);
-	
-			if (TownyPlayerListener != null)
-				pm.registerEvents(TownyPlayerListener, this);
-		}
+    /**
+     * Attempt to hook any plugins we want to access.
+     */
+    private void checkPlugins() {
+        Plugin test;
 
-		if (usingEssentialsDiscord) {
-			pm.registerEvents(new EssentialsDiscordHookListener(this), this);
-		}
-	}
-	
-	public void registerPermissions() {
-		// Register all Permissions.
-		for (String perm : getChannelsHandler().getAllPermissions()) {
-			try {
-				pm.addPermission(new Permission(perm, new HashMap<String, Boolean>()));
-			} catch (IllegalArgumentException e) {
-				//permission already registered.
-			}
-		}
-	}
-	
-	public void unregisterPermissions() {
-		// Register all Permissions.
-		for (String perm : getChannelsHandler().getAllPermissions()) {
-			pm.removePermission(new Permission(perm, new HashMap<String, Boolean>()));
-		}
-	}
-	
-	
-	public String getRootPath() {
-		return getTowny().getDataFolder().getPath();
-	}
+        test = pm.getPlugin("Towny");
+        if (test != null && test instanceof Towny)
+            towny = (Towny) test;
 
-	public String getTownySettingsPath() {
-		return getRootPath() + File.separator + "settings";
-	}
+        test = pm.getPlugin("dynmap");
+        if (test != null && pm.getPlugin("dynmap").isEnabled()) {
+            dynMap = (DynmapAPI) test;
+        }
 
-	public String getChatConfigPath() {
-		return getTownySettingsPath() + File.separator + "ChatConfig.yml";
-	}
-	
-	public String getChannelsConfigPath() {
-		return getTownySettingsPath() + File.separator + "Channels.yml";
-	}
+        test = pm.getPlugin("PlaceholderAPI");
+        if (test != null) {
+            usingPlaceholderAPI = true;
+        }
 
-	/**
-	 * @return the channels
-	 */
-	public ChannelsHolder getChannelsHandler() {
-		return channels;
-	}
+        test = pm.getPlugin("EssentialsDiscord");
+        if (test != null) {
+            usingEssentialsDiscord = true;
+        }
 
-	public Towny getTowny() {
-		return towny;
-	}
+        test = pm.getPlugin("Essentials");
+        if (test != null && JavaUtil.classExists("com.earth2me.essentials.Essentials")) {
+            this.essentials = (Essentials) test;
+        }
 
-	public DynmapAPI getDynmap() {
-		return dynMap;
-	}
+    }
 
-	public boolean isUsingEssentials() {
-		return essentials != null;
-	}
+    public void registerEvents() {
 
-	public Essentials getEssentials() {
-		return essentials;
-	}
+        if (TownyPlayerListener == null) {
+            TownyPlayerListener = new TownyChatPlayerListener(this);
 
-	public boolean isEssentialsMuted(Player player) {
-		if (!isUsingEssentials())
-			return false;
-		return EssentialsIntegration.isMuted(player);
-	}
+            if (TownyPlayerListener != null)
+                pm.registerEvents(TownyPlayerListener, this);
+        }
 
-	public boolean isIgnoredByEssentials(Player sender, Player player) {
-		if (!isUsingEssentials())
-			return false;
-		return EssentialsIntegration.ignoredByEssentials(sender, player);
-	}
+        if (usingEssentialsDiscord) {
+            pm.registerEvents(new EssentialsDiscordHookListener(this), this);
+        }
+    }
 
-	private void registerObjectCommands() {
-		List<Command> commands = new ArrayList<Command>();
-		for (Channel channel : channels.getAllChannels().values()) { // All channels
-			for (String cmd : channel.getCommands()) { // All Commands of All Channels
-				commands.add(new ChannelJoinAliasCommand(cmd, channel, this));
-			}
-		}
-		try {
-			final Field bukkitCommandMap = Bukkit.getServer().getClass().getDeclaredField("commandMap");
+    public void registerPermissions() {
+        // Register all Permissions.
+        for (String perm : getChannelsHandler().getAllPermissions()) {
+            try {
+                pm.addPermission(new Permission(perm, new HashMap<String, Boolean>()));
+            } catch (IllegalArgumentException e) {
+                //permission already registered.
+            }
+        }
+    }
 
-			bukkitCommandMap.setAccessible(true);
-			CommandMap commandMap = (CommandMap) bukkitCommandMap.get(Bukkit.getServer());
+    public void unregisterPermissions() {
+        // Register all Permissions.
+        for (String perm : getChannelsHandler().getAllPermissions()) {
+            pm.removePermission(new Permission(perm, new HashMap<String, Boolean>()));
+        }
+    }
 
-			commandMap.registerAll("TownyChat", commands);
-		} catch (NoSuchFieldException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		}
-	}
+    public String getRootPath() {
+        return getTowny().getDataFolder().getPath();
+    }
 
-	public TownyChatPlayerListener getTownyPlayerListener() {
-		return TownyPlayerListener;
-	}
-	
-	public Channel getPlayerChannel(Player player) {
-		return playerChannelMap.get(player.getUniqueId());
-	}
-	
-	public void setPlayerChannel(Player player, Channel channel) {
-		playerChannelMap.put(player.getUniqueId(), channel);
-	}
+    public String getTownySettingsPath() {
+        return getRootPath() + File.separator + "settings";
+    }
 
-	public TaskScheduler getScheduler() {
-		return (TaskScheduler) this.scheduler;
-	}
+    public String getChatConfigPath() {
+        return getTownySettingsPath() + File.separator + "ChatConfig.yml";
+    }
 
-	private static boolean isFoliaClassPresent() {
-		try {
-			Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
-			return true;
-		} catch (ClassNotFoundException e) {
-			return false;
-		}
-	}
+    public String getChannelsConfigPath() {
+        return getTownySettingsPath() + File.separator + "Channels.yml";
+    }
+
+    /**
+     * @return the channels
+     */
+    public ChannelsHolder getChannelsHandler() {
+        return channels;
+    }
+
+    public Towny getTowny() {
+        return towny;
+    }
+
+    public DynmapAPI getDynmap() {
+        return dynMap;
+    }
+
+    public boolean isUsingEssentials() {
+        return essentials != null;
+    }
+
+    public Essentials getEssentials() {
+        return essentials;
+    }
+
+    public boolean isEssentialsMuted(Player player) {
+        if (!isUsingEssentials())
+            return false;
+        return EssentialsIntegration.isMuted(player);
+    }
+
+    public boolean isIgnoredByEssentials(Player sender, Player player) {
+        if (!isUsingEssentials())
+            return false;
+        return EssentialsIntegration.ignoredByEssentials(sender, player);
+    }
+
+    private void registerObjectCommands() {
+        List<Command> commands = new ArrayList<Command>();
+        for (Channel channel : channels.getAllChannels().values()) { // All channels
+            for (String cmd : channel.getCommands()) { // All Commands of All Channels
+                commands.add(new ChannelJoinAliasCommand(cmd, channel, this));
+            }
+        }
+        try {
+            final Field bukkitCommandMap = Bukkit.getServer().getClass().getDeclaredField("commandMap");
+
+            bukkitCommandMap.setAccessible(true);
+            CommandMap commandMap = (CommandMap) bukkitCommandMap.get(Bukkit.getServer());
+
+            commandMap.registerAll("TownyChat", commands);
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public TownyChatPlayerListener getTownyPlayerListener() {
+        return TownyPlayerListener;
+    }
+
+    public Channel getPlayerChannel(Player player) {
+        return playerChannelMap.get(player.getUniqueId());
+    }
+
+    public void setPlayerChannel(Player player, Channel channel) {
+        playerChannelMap.put(player.getUniqueId(), channel);
+    }
+
+    public TaskScheduler getScheduler() {
+        return (TaskScheduler) this.scheduler;
+    }
 }

@@ -17,43 +17,44 @@ import java.util.List;
  */
 public class TownyChatCommand extends BaseCommand implements CommandExecutor {
 
-	private Chat plugin;
-	private static final List<String> townychat_help = new ArrayList<String>();
+    private static final List<String> townychat_help = new ArrayList<String>();
 
-	static {
+    static {
 
-		townychat_help.add(ChatTools.formatTitle("/townychat"));
-		//TODO: Add lang strings for description!
-		townychat_help.add(ChatTools.formatCommand("", "/townychat", "reload", ""));
-	}
+        townychat_help.add(ChatTools.formatTitle("/townychat"));
+        //TODO: Add lang strings for description!
+        townychat_help.add(ChatTools.formatCommand("", "/townychat", "reload", ""));
+    }
 
-	public TownyChatCommand(Chat instance) {
-		this.plugin = instance;
-	}
+    private Chat plugin;
+
+    public TownyChatCommand(Chat instance) {
+        this.plugin = instance;
+    }
 
 
-	@Override
-	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+    @Override
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 
-		if (cmd.getName().equalsIgnoreCase("townychat")) {
-			parseTownyChatCommand(sender, args);
-			return true;
-		}
-		return false;
-	}
+        if (cmd.getName().equalsIgnoreCase("townychat")) {
+            parseTownyChatCommand(sender, args);
+            return true;
+        }
+        return false;
+    }
 
-	private void parseTownyChatCommand(CommandSender sender, String[] split) {
-		if (split.length == 0 || split[0].equalsIgnoreCase("help") || split[0].equalsIgnoreCase("?")) {
-			for (String line : townychat_help) {
-				TownyMessaging.sendMessage(sender, line);
-			}
-		} else if (split[0].equalsIgnoreCase("reload")) {
-			plugin.reload();
-			TownyMessaging.sendMessage(sender, Translatable.of("tc_settings_reloaded"));
-		} else {
-			TownyMessaging.sendErrorMsg(sender, Translatable.of("tc_err_unrecognized_command_format"));
-		}
+    private void parseTownyChatCommand(CommandSender sender, String[] split) {
+        if (split.length == 0 || split[0].equalsIgnoreCase("help") || split[0].equalsIgnoreCase("?")) {
+            for (String line : townychat_help) {
+                TownyMessaging.sendMessage(sender, line);
+            }
+        } else if (split[0].equalsIgnoreCase("reload")) {
+            plugin.reload();
+            TownyMessaging.sendMessage(sender, Translatable.of("tc_settings_reloaded"));
+        } else {
+            TownyMessaging.sendErrorMsg(sender, Translatable.of("tc_err_unrecognized_command_format"));
+        }
 
-	}
+    }
 
 }

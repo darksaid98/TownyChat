@@ -1,7 +1,6 @@
 package com.palmergames.bukkit.TownyChat.events;
 
 import com.palmergames.bukkit.TownyChat.channels.Channel;
-
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
@@ -18,16 +17,16 @@ public class PlayerJoinChatChannelEvent extends Event {
     private final Channel channel;
 
     public PlayerJoinChatChannelEvent(Player player, Channel channel) {
-    	super(!Bukkit.getServer().isPrimaryThread());
+        super(!Bukkit.getServer().isPrimaryThread());
         this.player = player;
         this.channel = channel;
     }
 
-    public HandlerList getHandlers() {
+    public static HandlerList getHandlerList() {
         return HANDLERS;
     }
 
-    public static HandlerList getHandlerList() {
+    public HandlerList getHandlers() {
         return HANDLERS;
     }
 
