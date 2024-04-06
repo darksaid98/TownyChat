@@ -124,7 +124,7 @@ public class StandardChannel extends Channel {
                 break;
             case PRIVATE:
             case GLOBAL:
-                tryPostToDynmap(player, event.getMessage());
+                tryPostToDynmap(player, event.message().toString());
                 break;
         }
     }
@@ -278,7 +278,7 @@ public class StandardChannel extends Channel {
         sendSpyMessage(event, channelType, recipients);
 
         if (hookEvent.isChanged()) {
-            event.setMessage(hookEvent.getMessage());
+            event.message(Component.text(hookEvent.getMessage()));
             event.viewers().clear();
             event.viewers().addAll(hookEvent.getRecipients());
         }
@@ -296,7 +296,7 @@ public class StandardChannel extends Channel {
         String format = formatSpyMessage(type, event.getPlayer());
         if (format == null) return;
 
-        String message = Colors.translateColorCodes(event.getMessage());
+        String message = Colors.translateColorCodes(event.message().toString());
         // Remove spies who've already seen the message naturally.
         spies.stream()
             .filter(spy -> !recipients.contains(spy))
