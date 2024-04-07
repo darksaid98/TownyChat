@@ -70,7 +70,7 @@ public class StandardChannel extends Channel {
         String format = getFormat(player);
 
         // Get the list of message recipients.
-        Set<Player> recipients = getRecipients(player, town, nation, channelType, event.getRecipients());
+        Set<Player> recipients = getRecipients(player, town, nation, channelType, new HashSet<>(Bukkit.getOnlinePlayers()));
 
         // Try sending an alone message if it is called for.
         trySendingAloneMessage(player, recipients);
