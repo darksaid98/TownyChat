@@ -161,8 +161,8 @@
                 <version>3.11.0</version>
                 <configuration>
                     <release>8</release>
-                    <source>14</source>
-                    <target>14</target>
+                    <source>16</source>
+                    <target>16</target>
                     <compilerArgs>
                         <arg>-Xplugin:jabel</arg>
                     </compilerArgs>

@@ -14,11 +14,14 @@ import com.palmergames.bukkit.towny.utils.MetaDataUtil;
 import com.palmergames.bukkit.util.Colors;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import me.clip.placeholderapi.PlaceholderAPI;
+import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.Tag;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.kyori.adventure.audience.Audience;
+import net.kyori.adventure.text.minimessage.tag.standard.StandardTags;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -29,6 +32,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 public class TownyChatPlayerListener implements Listener {
     public WeakHashMap<Player, String> directedChat = new WeakHashMap<>();
@@ -70,8 +74,8 @@ public class TownyChatPlayerListener implements Listener {
     @EventHandler
     public void onPlayerChat(AsyncChatEvent event) {
         Player player = event.getPlayer();
+        final String messageContent = PlainTextComponentSerializer.plainText().serializeOr(event.message(), "");
         Component message = event.message();
-        Component newMessage = message;
         String messageString = message.toString();
 
         // TODO START HERE ROOOOOSE :))) This is where the logic "begins"
@@ -160,7 +164,42 @@ public class TownyChatPlayerListener implements Listener {
 
             // Format the chat line, replacing the TownyChat chat tags.
             tagResolvers.add(TownyChatFormatter.getChatFormat(chatEvent));
-            newMessage = MiniMessage.builder().tags(TagResolver.resolver(tagResolvers)).build().deserialize(newFormat);
+//            Component newMessage = MiniMessage.builder().
+            Component newMessage = MiniMessage.builder()
+                .tags(
+                    TagResolver.resolver(
+                        Stream.concat(
+                            tagResolvers.stream(),
+                            List.of(
+                                StandardTags.hoverEvent(),
+                                StandardTags.clickEvent(),
+                                StandardTags.color(),
+                                StandardTags.keybind(),
+                                StandardTags.transition(),
+                                StandardTags.insertion(),
+                                StandardTags.font(),
+                                StandardTags.decorations(),
+                                StandardTags.gradient(),
+                                StandardTags.rainbow(),
+                                StandardTags.reset(),
+                                StandardTags.newline()
+                            ).stream()
+                        ).toList()
+                    )
+                )
+                .build()
+                .deserialize(newFormat);
+
+            /*event.renderer((player1, component, component1, audience) -> {
+                final @NotNull Optional<UUID> recipientUUID = audience.get(Identity.UUID);
+                final Audience recipientViewer = audience;
+
+                Component renderedMessage = renderedMessage;
+                for (final var renderer : this.renderers()) {
+                    renderedMessage = renderer.render(this.sender, recipientViewer, renderedMessage, renderedMessage);
+                }
+                return renderedMessage;
+            });*/
 //			newFormat = TownyChatFormatter.getChatFormat(chatEvent);
 
             // Attempt to apply the new format.
@@ -174,7 +213,7 @@ public class TownyChatPlayerListener implements Listener {
 // 			Audience.audience(event.getRecipients().stream().map(p -> Chat.getTownyChat().adventure().player(p)).toArray(Audience[]::new)).sendMessage(component);;
 
             // TODO unsure if this works lol
-            Audience.audience(event.viewers().stream().toArray(Audience[]::new)).sendMessage(newMessage);
+            Audience.audience(event.viewers()).sendMessage(newMessage);
 
 //			event.setFormat(GsonComponentSerializer.gson().serialize(component));
         }
