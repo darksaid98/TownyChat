@@ -15,12 +15,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 public abstract class Channel {
-
     protected ConcurrentMap<String, Integer> absentPlayers = null;
     protected ConcurrentMap<String, Integer> mutedPlayers = null;
     private String name;
     private List<String> commands;
-    private channelTypes type;
+    private ChannelTypes type;
     private String channelTag, format, messageColour, permission, leavePermission, channelSound, listenPermission, speakPermission;
     private HashMap<String, WorldFormat> worldFormatGroups = new HashMap<>();
     private double range;
@@ -63,14 +62,14 @@ public abstract class Channel {
     /**
      * @return the type
      */
-    public channelTypes getType() {
+    public ChannelTypes getType() {
         return type;
     }
 
     /**
      * @param type the type to set
      */
-    public void setType(channelTypes type) {
+    public void setType(ChannelTypes type) {
         this.type = type;
     }
 
@@ -209,8 +208,7 @@ public abstract class Channel {
      */
     public boolean isPresent(String name) {
         if (absentPlayers == null) return true;
-        if (absentPlayers.containsKey(name)) return false;
-        return true;
+        return !absentPlayers.containsKey(name);
     }
 
     /*
@@ -525,7 +523,7 @@ public abstract class Channel {
     }
 
     public boolean isGovernmentChannel() {
-        return type.equals(channelTypes.TOWN) || type.equals(channelTypes.NATION) || type.equals(channelTypes.ALLIANCE);
+        return type.equals(ChannelTypes.TOWN) || type.equals(ChannelTypes.NATION) || type.equals(ChannelTypes.ALLIANCE);
     }
 
     public boolean hasPermission(Player player) {

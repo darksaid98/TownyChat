@@ -30,6 +30,7 @@ import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.dynmap.DynmapAPI;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -65,7 +66,6 @@ public class Chat extends JavaPlugin {
     private DynmapAPI dynMap = null;
     private Essentials essentials = null;
     private BukkitAudiences adventure = null;
-    private MiniMessage miniMessage = null;
 
     public Chat() {
         chat = this;
@@ -91,7 +91,6 @@ public class Chat extends JavaPlugin {
         channels = new ChannelsHolder(this);
         playerChannelMap = new ConcurrentHashMap<>();
         adventure = BukkitAudiences.create(this);
-        miniMessage = MiniMessage.builder().build();
 
         checkPlugins();
         if (towny == null || !townyVersionCheck()) {
@@ -145,10 +144,6 @@ public class Chat extends JavaPlugin {
         return this.adventure;
     }
 
-    public @NonNull MiniMessage getMiniMessage() {
-        return miniMessage;
-    }
-
     @Override
     public void onDisable() {
         unregisterPermissions();
@@ -158,7 +153,6 @@ public class Chat extends JavaPlugin {
             adventure.close();
             adventure = null;
         }
-        miniMessage = null;
         dynMap = null;
         towny = null;
         pm = null;
@@ -182,7 +176,7 @@ public class Chat extends JavaPlugin {
         Plugin test;
 
         test = pm.getPlugin("Towny");
-        if (test != null && test instanceof Towny)
+        if (test instanceof Towny)
             towny = (Towny) test;
 
         test = pm.getPlugin("dynmap");
@@ -208,12 +202,9 @@ public class Chat extends JavaPlugin {
     }
 
     public void registerEvents() {
-
         if (TownyPlayerListener == null) {
             TownyPlayerListener = new TownyChatPlayerListener(this);
-
-            if (TownyPlayerListener != null)
-                pm.registerEvents(TownyPlayerListener, this);
+            pm.registerEvents(TownyPlayerListener, this);
         }
 
         if (usingEssentialsDiscord) {
@@ -304,9 +295,7 @@ public class Chat extends JavaPlugin {
             CommandMap commandMap = (CommandMap) bukkitCommandMap.get(Bukkit.getServer());
 
             commandMap.registerAll("TownyChat", commands);
-        } catch (NoSuchFieldException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
+        } catch (NoSuchFieldException | IllegalAccessException e) {
             e.printStackTrace();
         }
     }

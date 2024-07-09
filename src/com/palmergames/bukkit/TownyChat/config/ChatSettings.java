@@ -8,6 +8,7 @@ import org.bukkit.Bukkit;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Objects;
 
 
 public class ChatSettings {
@@ -51,9 +52,9 @@ public class ChatSettings {
             if (root.getComments().length > 0)
                 addComment(root.getRoot(), root.getComments());
 
-            if (root.getRoot() == ChatConfigNodes.VERSION.getRoot())
+            if (Objects.equals(root.getRoot(), ChatConfigNodes.VERSION.getRoot()))
                 setNewProperty(root.getRoot(), version);
-            else if (root.getRoot() == ChatConfigNodes.LAST_RUN_VERSION.getRoot())
+            else if (Objects.equals(root.getRoot(), ChatConfigNodes.LAST_RUN_VERSION.getRoot()))
                 setNewProperty(root.getRoot(), getLastRunVersion(version));
             else
                 // A regular config node.

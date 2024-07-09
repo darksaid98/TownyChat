@@ -75,7 +75,7 @@ public class ChannelsHolder {
      * @param type
      * @return channel or null if none.
      */
-    public Channel getActiveChannel(Player player, channelTypes type) {
+    public Channel getActiveChannel(Player player, ChannelTypes type) {
 
         return getActiveChannel(player, type, false);
     }
@@ -88,7 +88,7 @@ public class ChannelsHolder {
      * @param unlimitedRange true when a channel has to have an unlimited range.
      * @return channel or null if none.
      */
-    public Channel getActiveChannel(Player player, channelTypes type, boolean unlimitedRange) {
+    public Channel getActiveChannel(Player player, ChannelTypes type, boolean unlimitedRange) {
 
         Channel local = null;
         Channel global = null;
@@ -135,7 +135,7 @@ public class ChannelsHolder {
      * @param type
      * @return channel or null if none.
      */
-    public Channel getChannel(Player player, channelTypes type) {
+    public Channel getChannel(Player player, ChannelTypes type) {
 
         Channel local = null;
         Channel global = null;

@@ -1,11 +1,13 @@
 package com.palmergames.bukkit.TownyChat.channels;
 
+import com.github.milkdrinkers.colorparser.ColorParser;
 import com.palmergames.bukkit.TownyChat.Chat;
-import com.palmergames.bukkit.TownyChat.TownyChatFormatter;
-import com.palmergames.bukkit.TownyChat.config.ChatSettings;
 import com.palmergames.bukkit.TownyChat.events.AsyncChatHookEvent;
+import com.palmergames.bukkit.TownyChat.util.Adventure;
+import com.palmergames.bukkit.TownyChat.util.TownyChatFormatter;
+import com.palmergames.bukkit.TownyChat.config.ChatSettings;
 import com.palmergames.bukkit.TownyChat.events.PlayerJoinChatChannelEvent;
-import com.palmergames.bukkit.TownyChat.listener.LocalTownyChatEvent;
+import com.palmergames.bukkit.TownyChat.listener.InternalTownyChatEvent;
 import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.TownyMessaging;
 import com.palmergames.bukkit.towny.TownyUniverse;
@@ -15,9 +17,12 @@ import com.palmergames.bukkit.towny.object.Town;
 import com.palmergames.bukkit.util.Colors;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import me.clip.placeholderapi.PlaceholderAPI;
+import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.Tag;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import net.kyori.adventure.text.minimessage.tag.standard.StandardTags;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Sound;
@@ -30,87 +35,110 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class StandardChannel extends Channel {
-
-    private Chat plugin;
+    private final Chat plugin;
 
     public StandardChannel(Chat instance, String name) {
         super(name);
         this.plugin = instance;
     }
 
-    @Override
-    public void chatProcess(AsyncChatEvent event) {
+    @Deprecated
+    public void chatProcess(AsyncPlayerChatEvent e) {
+        IllegalCallerException illegalCallerException = new IllegalCallerException("A plugin is using the deprecated method Channel#chatProcess(AsyncPlayerChatEvent) which is no longer supported. Please use Channel#chatProcess(AsyncChatEvent)!");
+        Chat.getTownyChat().getComponentLogger().warn(
+            Component.text(illegalCallerException + Arrays.toString(illegalCallerException.getStackTrace()))
+        );
+    }
 
-        channelTypes channelType = this.getType();
-        Player player = event.getPlayer();
+    public void chatProcess(AsyncChatEvent e) {
+        ChannelTypes channelType = this.getType();
+        Player p = e.getPlayer();
+        Resident res = TownyAPI.getInstance().getResident(p);
         boolean notifyjoin = false;
 
-        Resident resident = TownyUniverse.getInstance().getResident(player.getUniqueId());
-        if (resident == null)
+        if (res == null) {
+            e.setCancelled(true);
             return;
-        Town town = TownyAPI.getInstance().getResidentTownOrNull(resident);
-        Nation nation = TownyAPI.getInstance().getResidentNationOrNull(resident);
+        }
+
+        Town town = TownyAPI.getInstance().getResidentTownOrNull(res);
+        Nation nation = TownyAPI.getInstance().getResidentNationOrNull(res);
 
         // If the channel would require a town/nation which is null, cancel and fail early.
-        if (town == null && channelType.equals(channelTypes.TOWN) ||
-            nation == null && (channelType.equals(channelTypes.NATION) || channelType.equals(channelTypes.ALLIANCE))) {
-            event.setCancelled(true);
+        if (
+            town == null && channelType.equals(ChannelTypes.TOWN) ||
+            nation == null && (channelType.equals(ChannelTypes.NATION) || channelType.equals(ChannelTypes.ALLIANCE))
+        ) {
+            e.setCancelled(true);
             return;
         }
 
-        // If player sends a message to a channel they have left
-        // tell the channel to add the player back
-        if (isAbsent(player.getName())) {
-            join(player);
+        // If player sends a message in a channel they have left, rejoin the channel
+        if (isAbsent(p.getName())) {
+            join(p);
             notifyjoin = true;
-            Bukkit.getPluginManager().callEvent(new PlayerJoinChatChannelEvent(player, this));
+            Bukkit.getPluginManager().callEvent(new PlayerJoinChatChannelEvent(p, this));
         }
 
-        // Set the channel specific format
-        String format = getFormat(player);
+        final String channelMessageString = Chat.usingPlaceholderAPI ?
+            PlaceholderAPI.setPlaceholders(p, getFormat(p)) :
+            getFormat(p);
 
-        // Get the list of message recipients.
-        Set<Player> recipients = getRecipients(player, town, nation, channelType, new HashSet<>(Bukkit.getOnlinePlayers()));
+        final InternalTownyChatEvent chatEvent = new InternalTownyChatEvent(e, res);
+        final Component finalMessage = MiniMessage.builder()
+            .tags(
+                TagResolver.builder()
+                    .resolvers(
+                        TownyChatFormatter.parser(chatEvent),
+                        TagResolver.resolver(
+                            "channeltag", Tag.inserting(ColorParser.of(this.getChannelTag()).parseLegacy().build())
+                        ),
+                        TagResolver.resolver(
+                            "msgcolour", Tag.inserting(ColorParser.of(this.getMessageColour()).parseLegacy().build())
+                        ),
+                        StandardTags.defaults(),
+                        TagResolver.resolver( // TODO Parse color codes, the player has permissions to use
+                            "msg", Tag.inserting(e.originalMessage())
+                        )
+                    )
+                    .build()
+            )
+            .build().deserialize(channelMessageString);
 
-        // Try sending an alone message if it is called for.
-        trySendingAloneMessage(player, recipients);
+        // Get recipients
+        final Set<Player> recipients = getRecipients(p, town, nation, channelType);
+        final Audience recipientAudience = Audience.audience(recipients);
 
-        // format is left to store the original non-PAPI-parsed chat format.
-        String newFormat = format;
-        // Parse any PAPI placeholders.
-        if (Chat.usingPlaceholderAPI)
-            newFormat = PlaceholderAPI.setPlaceholders(player, format);
+        // Try sending an alone message if the player is alone in a channel.
+        trySendingAloneMessage(p, recipients);
 
-        /*
-         * Only modify GLOBAL channelType chat (general and local chat channels) if isModifyChat() is true.
-         */
-        if (!(channelType.equals(channelTypes.GLOBAL) && !ChatSettings.isModify_chat()))
-            applyFormats(event, format, newFormat, resident);
-
-        /*
-         *  Set recipients for Bukkit to send this message to.
-         */
-        event.viewers().clear();
-        event.viewers().addAll(recipients);
+        // Calculate recipients and set recipients
+        e.message(Component.empty());
+        e.viewers().clear();
+        e.viewers().add(recipientAudience);
+        e.viewers().add(Bukkit.getServer().getConsoleSender());
+        e.renderer(
+            (source, sourceDisplayName, message, viewer) -> finalMessage
+        );
 
         // If the server has marked this Channel as hooked, fire the AsyncChatHookEvent.
-        // If the event is cancelled, cancel the chat entirely.
+        // If the e is cancelled, cancel the chat entirely.
         // Fires its own sendSpyMessage().
         if (isHooked())
-            if (!sendOffHookedMessage(event, channelType, recipients)) {
-                event.setCancelled(true);
+            if (!sendOffHookedMessage(e, channelType, recipients)) {
+                e.setCancelled(true);
                 return;
             }
 
         // Send spy message if this was never hooked.
         if (!isHooked())
-            sendSpyMessage(event, channelType, recipients);
+            sendSpyMessage(e, channelType, recipients);
 
         // Play the channel sound, if used.
         tryPlayChannelSound(recipients);
 
         if (notifyjoin)
-            TownyMessaging.sendMessage(player, "You join " + Colors.translateColorCodes(getMessageColour()) + getName());
+            TownyMessaging.sendMessage(p, "You join " + Colors.translateColorCodes(getMessageColour()) + getName());
 
         /*
          * Perform any last channel specific functions like logging this chat and
@@ -124,19 +152,17 @@ public class StandardChannel extends Channel {
                 break;
             case PRIVATE:
             case GLOBAL:
-                tryPostToDynmap(player, event.message().toString());
+                tryPostToDynmap(p, e.message());
                 break;
         }
     }
 
-    private Set<Player> getRecipients(Player player, Town town, Nation nation, channelTypes channelType, Set<Player> recipients) {
+    private Set<Player> getRecipients(Player player, Town town, Nation nation, ChannelTypes channelType) {
         return switch (channelType) {
             case TOWN -> new HashSet<>(findRecipients(player, TownyAPI.getInstance().getOnlinePlayers(town)));
             case NATION -> new HashSet<>(findRecipients(player, TownyAPI.getInstance().getOnlinePlayers(nation)));
-            case ALLIANCE ->
-                new HashSet<>(findRecipients(player, TownyAPI.getInstance().getOnlinePlayersAlliance(nation)));
-            case DEFAULT -> new HashSet<>(findRecipients(player, new ArrayList<>(recipients)));
-            case GLOBAL, PRIVATE -> new HashSet<>(findRecipients(player, new ArrayList<>(recipients)));
+            case ALLIANCE -> new HashSet<>(findRecipients(player, TownyAPI.getInstance().getOnlinePlayersAlliance(nation)));
+            case DEFAULT, GLOBAL, PRIVATE -> new HashSet<>(findRecipients(player, new ArrayList<>(Bukkit.getOnlinePlayers())));
         };
     }
 
@@ -149,7 +175,7 @@ public class StandardChannel extends Channel {
      */
     private Set<Player> findRecipients(Player sender, List<Player> playerList) {
         // Refresh the potential channels a player can see, if they are not currently in the channel.
-        playerList.stream().forEach(p -> refreshPlayer(this, p));
+        playerList.forEach(p -> refreshPlayer(this, p));
         return playerList.stream()
             .filter(p -> testDistance(sender, p, getRange())) // Within range.
             .filter(p -> !plugin.isIgnoredByEssentials(sender, p)) // Check essentials ignore.
@@ -190,97 +216,34 @@ public class StandardChannel extends Channel {
 
     private void trySendingAloneMessage(Player sender, Set<Player> recipients) {
         if (ChatSettings.isUsingAloneMessage() &&
-            recipients.stream().filter(p -> sender.canSee(p)).count() < 2) // sender will usually be a recipient of their own message.
+            recipients.stream().filter(sender::canSee).count() < 2) // sender will usually be a recipient of their own message.
             TownyMessaging.sendMessage(sender, ChatSettings.getUsingAloneMessageString());
-    }
-
-    private void applyFormats(AsyncChatEvent event, String originalFormat, String workingFormat, Resident resident) {
-        List<TagResolver> tagResolvers = new ArrayList<>();
-
-        // Parse out our own channelTag and msgcolour tags.
-        tagResolvers = parseTagAndMsgColour(tagResolvers);
-        // Attempt to apply the new format.
-//		catchFormatConversionException(event, originalFormat, newFormat);
-
-        // Fire the LocalTownyChatEvent.
-        LocalTownyChatEvent chatEvent = new LocalTownyChatEvent(event, resident);
-        // Format the chat line, replacing the TownyChat chat tags.
-        tagResolvers.add(TownyChatFormatter.getChatFormat(chatEvent));
-//		newFormat = TownyChatFormatter.getChatFormat(chatEvent);
-        // Attempt to apply the new format.
-//		catchFormatConversionException(event, originalFormat, newFormat);
-//		Component component = Chat.getTownyChat().getMiniMessage().deserialize(workingFormat, tagResolvers.toArray(new TagResolver[0]));
-//		Audience.audience(event.getRecipients().stream().map(p -> Chat.getTownyChat().adventure().player(p)).toArray(Audience[]::new)).sendMessage(component);;
-
-        //		event.setFormat(GsonComponentSerializer.gson().serialize(component));
-    }
-
-    private String parseTagAndMsgColour(String format) {
-        return format
-            .replace("{channelTag}", Colors.translateColorCodes(getChannelTag() != null ? getChannelTag() : ""))
-            .replace("{msgcolour}", Colors.translateColorCodes(getMessageColour() != null ? getMessageColour() : ""));
-    }
-
-    private List<TagResolver> parseTagAndMsgColour(List<TagResolver> tagResolvers) {
-        tagResolvers.add(
-            TagResolver.resolver(
-                TagResolver.resolver("channeltag", Tag.inserting(getChannelTag() != null ? Component.text(getChannelTag()) : Component.empty())),
-                TagResolver.resolver("msgcolour", Tag.inserting(getMessageColour() != null ? Component.text(getMessageColour()) : Component.empty()))
-            )
-        );
-        return tagResolvers;
-    }
-
-    private void catchFormatConversionException(AsyncPlayerChatEvent event, String format, String newFormat) {
-        try {
-            event.setFormat(newFormat);
-        } catch (UnknownFormatConversionException e) {
-            // This exception is usually thrown when a PAPI placeholder did not get parsed
-            // and has left behind a % symbol followed by something that String#format
-            // cannot handle.
-            boolean percentSymbol = format.contains("%" + e.getConversion());
-            String errmsg = "TownyChat tried to apply a chat format that is not allowed: '" +
-                newFormat + "', because of the " + e.getConversion() + " symbol" +
-                (percentSymbol ? ", found after a %. There is probably a PAPIPlaceholder that could not be parsed." : "." +
-                    " You should attempt to correct this in your towny\\settings\\chatconfig.yml file and use /townychat reload.");
-            Chat.getTownyChat().getLogger().severe(errmsg);
-
-            if (percentSymbol)
-                // Attempt to remove the unparsed placeholder and send this right back.
-                catchFormatConversionException(event, format, purgePAPI(newFormat, "%" + e.getConversion()));
-            else
-                // Just let the chat go, this results in an error in the log, and TownyChat not being able to format chat.
-                event.setFormat(format);
-        }
-    }
-
-    private String purgePAPI(String format, String startOfPlaceholder) {
-        return format.replaceAll(startOfPlaceholder + ".*%", "");
     }
 
     /**
      * Send off TownyChat's {@link AsyncChatHookEvent} which allows other plugins to
      * cancel or modify TownyChat's messaging.
      *
-     * @param event       {@link AsyncChatEvent} that has caused a message.
-     * @param channelType {@link channelTypes} which this message is being sent through.
+     * @param e       {@link AsyncChatEvent} that has caused a message.
+     * @param channelType {@link ChannelTypes} which this message is being sent through.
      * @return false if the AsyncChatHookEvent is cancelled.
      */
-    private boolean sendOffHookedMessage(AsyncChatEvent event, channelTypes channelType, Set<Player> recipients) {
-        AsyncChatHookEvent hookEvent = new AsyncChatHookEvent(event, this, !Bukkit.getServer().isPrimaryThread(), recipients);
+    private boolean sendOffHookedMessage(AsyncChatEvent e, ChannelTypes channelType, Set<Player> recipients) {
+        AsyncChatHookEvent hookEvent = new AsyncChatHookEvent(e, this, recipients);
         Bukkit.getServer().getPluginManager().callEvent(hookEvent);
         if (hookEvent.isCancelled())
             return false;
+
         /*
          * Send spy message before another plugin changes any of the recipients, so we
          * know which people can see it.
          */
-        sendSpyMessage(event, channelType, recipients);
+        sendSpyMessage(e, channelType, recipients);
 
         if (hookEvent.isChanged()) {
-            event.message(Component.text(hookEvent.getMessage()));
-            event.viewers().clear();
-            event.viewers().addAll(hookEvent.getRecipients());
+            e.message(hookEvent.message());
+            e.viewers().clear();
+            e.viewers().addAll(hookEvent.getRecipients());
         }
         return true;
     }
@@ -291,12 +254,12 @@ public class StandardChannel extends Channel {
      * @param event - Chat Event.
      * @param type  - Channel Type
      */
-    private void sendSpyMessage(AsyncChatEvent event, channelTypes type, Set<Player> recipients) {
+    private void sendSpyMessage(AsyncChatEvent event, ChannelTypes type, Set<Player> recipients) {
         Set<Player> spies = getSpies();
         String format = formatSpyMessage(type, event.getPlayer());
         if (format == null) return;
 
-        String message = Colors.translateColorCodes(event.message().toString());
+        String message = Adventure.plainText().serialize(event.message());
         // Remove spies who've already seen the message naturally.
         spies.stream()
             .filter(spy -> !recipients.contains(spy))
@@ -321,7 +284,7 @@ public class StandardChannel extends Channel {
      * @return format - Message format.
      */
     @Nullable
-    private String formatSpyMessage(channelTypes type, Player player) {
+    private String formatSpyMessage(ChannelTypes type, Player player) {
         Resident resident = TownyUniverse.getInstance().getResident(player.getUniqueId());
         if (resident == null)
             return null;
@@ -331,8 +294,8 @@ public class StandardChannel extends Channel {
         return ChatColor.GOLD + "[SPY] " + ChatColor.WHITE + channelPrefix + resident.getName() + ": ";
     }
 
-    private String getGovtChannelSpyingPrefix(Resident resident, channelTypes type, String channelPrefix) {
-        String slug = type.equals(channelTypes.TOWN)
+    private String getGovtChannelSpyingPrefix(Resident resident, ChannelTypes type, String channelPrefix) {
+        String slug = type.equals(ChannelTypes.TOWN)
             ? TownyAPI.getInstance().getResidentTownOrNull(resident).getName()    // Town chat.
             : TownyAPI.getInstance().getResidentNationOrNull(resident).getName(); // Nation or Alliance chat.
         return channelPrefix + "[" + slug + "] ";
@@ -365,11 +328,11 @@ public class StandardChannel extends Channel {
      * @param player  Player which has spoken.
      * @param message Message being spoken.
      */
-    private void tryPostToDynmap(Player player, String message) {
+    private void tryPostToDynmap(Player player, Component message) {
         if (super.getRange() > 0)
             return;
         DynmapAPI dynMap = plugin.getDynmap();
         if (dynMap != null)
-            dynMap.postPlayerMessageToWeb(player, message);
+            dynMap.postPlayerMessageToWeb(player, Adventure.plainText().serialize(message));
     }
 }

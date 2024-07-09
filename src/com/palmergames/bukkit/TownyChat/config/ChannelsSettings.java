@@ -3,7 +3,7 @@ package com.palmergames.bukkit.TownyChat.config;
 import com.palmergames.bukkit.TownyChat.Chat;
 import com.palmergames.bukkit.TownyChat.channels.Channel;
 import com.palmergames.bukkit.TownyChat.channels.StandardChannel;
-import com.palmergames.bukkit.TownyChat.channels.channelTypes;
+import com.palmergames.bukkit.TownyChat.channels.ChannelTypes;
 import com.palmergames.bukkit.config.CommentedConfiguration;
 import com.palmergames.bukkit.towny.TownyUniverse;
 import com.palmergames.bukkit.towny.object.TownyWorld;
@@ -245,7 +245,7 @@ public class ChannelsSettings {
         ChannelDetails data = new ChannelsSettings.ChannelDetails(channelConfig, channelName);
         // The following will always be present in some manner
         channel.setCommands(data.getCommands());
-        channel.setType(channelTypes.valueOf(data.getType()));
+        channel.setType(ChannelTypes.valueOf(data.getType()));
         channel.setFormat(data.getFormat());
         channel.setWorldFormats(data.getWorldFormats());
         channel.setRange(data.getRange());

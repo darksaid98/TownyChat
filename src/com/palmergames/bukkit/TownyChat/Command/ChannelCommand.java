@@ -2,7 +2,7 @@ package com.palmergames.bukkit.TownyChat.Command;
 
 import com.palmergames.bukkit.TownyChat.Chat;
 import com.palmergames.bukkit.TownyChat.channels.Channel;
-import com.palmergames.bukkit.TownyChat.channels.channelTypes;
+import com.palmergames.bukkit.TownyChat.channels.ChannelTypes;
 import com.palmergames.bukkit.TownyChat.events.PlayerJoinChatChannelEvent;
 import com.palmergames.bukkit.towny.TownyMessaging;
 import com.palmergames.bukkit.towny.TownyUniverse;
@@ -265,7 +265,7 @@ public class ChannelCommand extends BaseCommand implements CommandExecutor {
             nextChannel = plugin.getChannelsHandler().getDefaultChannel();
 
         if (nextChannel == null)
-            nextChannel = plugin.getChannelsHandler().getActiveChannel(player, channelTypes.GLOBAL);
+            nextChannel = plugin.getChannelsHandler().getActiveChannel(player, ChannelTypes.GLOBAL);
 
         // If the new channel is not us, announce it
         if (nextChannel != null && !chan.getName().equalsIgnoreCase(nextChannel.getName())) {

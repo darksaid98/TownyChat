@@ -1,13 +1,15 @@
 package com.palmergames.bukkit.TownyChat.events;
 
-import com.palmergames.bukkit.TownyChat.Chat;
+import com.github.milkdrinkers.colorparser.ColorParser;
 import com.palmergames.bukkit.TownyChat.channels.Channel;
+import com.palmergames.bukkit.TownyChat.util.Adventure;
 import io.papermc.paper.event.player.AsyncChatEvent;
-import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Set;
 
@@ -28,25 +30,89 @@ import java.util.Set;
  *      permission: 'towny.chat.general'
  *      range: '-1'
  */
-public class AsyncChatHookEvent extends Event {
-    private static final HandlerList handlers = new HandlerList();
-    protected AsyncChatEvent event;
-    protected boolean changed;
-    protected Channel channel;
-    protected Set<Player> recipients;
-    protected Audience audience;
-
-    public AsyncChatHookEvent(AsyncChatEvent event, Channel channel, boolean async, Set<Player> recipients) {
-        super(async);
-        this.event = event;
-        this.changed = false;
-        this.channel = channel;
-        this.recipients = recipients;
-        this.audience = Audience.audience(getRecipients().stream().map(player -> Chat.getTownyChat().adventure().player(player)).toArray(Audience[]::new));
-    }
+public class AsyncChatHookEvent extends Event implements Cancellable {
+    private static final HandlerList HANDLER_LIST = new HandlerList();
+    private boolean cancelled;
 
     public static HandlerList getHandlerList() {
-        return handlers;
+        return HANDLER_LIST;
+    }
+
+    @Override
+    public @NotNull HandlerList getHandlers() {
+        return HANDLER_LIST;
+    }
+
+    @Override
+    public boolean isCancelled() {
+        return this.cancelled;
+    }
+
+    @Override
+    public void setCancelled(boolean cancelled) {
+        changed = cancelled;
+        this.cancelled = cancelled;
+    }
+
+    private final AsyncChatEvent event;
+    private boolean changed;
+    private final Channel channel;
+    private final Set<Player> recipients;
+
+    public AsyncChatHookEvent(AsyncChatEvent event, Channel channel, Set<Player> recipients) {
+        super(event.isAsynchronous());
+        this.event = event;
+        this.changed = false;
+        this.cancelled = event.isCancelled();
+
+        this.channel = channel;
+        this.recipients = recipients;
+    }
+
+    public AsyncChatEvent getEvent() {
+        return event;
+    }
+
+    @Deprecated
+    public String getFormat() {
+        return "undefined";
+    }
+
+    @Deprecated
+    public void setFormat(String format) {
+    }
+
+    @Deprecated
+    public String getMessage() {
+        return Adventure.plainText().serialize(message());
+    }
+
+    @Deprecated
+    public void setMessage(String message) {
+        message(ColorParser.of(message).parseLegacy().build());
+    }
+
+    public Component message() {
+        return event.message();
+    }
+
+    public void message(Component message) {
+        changed = true;
+        event.message(message);
+    }
+
+    public Set<Player> getRecipients() {
+        return this.recipients;
+    }
+
+    public void setRecipients(Set<Player> recipients) {
+        changed = true;
+        this.recipients.clear();
+        this.recipients.addAll(recipients);
+    }
+
+    public Player getPlayer() {
+        return event.getPlayer();
     }
 
     public Channel getChannel() {
@@ -65,70 +131,5 @@ public class AsyncChatHookEvent extends Event {
      */
     public void setChanged(boolean changed) {
         this.changed = changed;
-    }
-
-    public AsyncChatEvent getAsyncPlayerChatEvent() {
-        return event;
-    }
-
-    public String getFormat() {
-        return "";
-    }
-
-    public void setFormat(String format) {
-    }
-
-    public String getMessage() {
-        return "";
-    }
-
-    public void setMessage(String message) {
-    }
-
-    public void setMessage(Component message) {
-        changed = true;
-        event.message(message);
-    }
-
-    public Component message() {
-        return event.message();
-    }
-
-    public Set<Player> getRecipients() {
-        return this.recipients;
-    }
-
-    public void setRecipients(Set<Player> recipients) {
-        changed = true;
-        this.recipients.clear();
-        this.recipients.addAll(recipients);
-        setAudience(Audience.audience(this.recipients.stream().map(player -> Chat.getTownyChat().adventure().player(player)).toArray(Audience[]::new))); // Update audience as well
-    }
-
-    public Audience getAudience() {
-        return this.audience;
-    }
-
-    public void setAudience(Audience audience) {
-        changed = true;
-        this.audience = audience;
-    }
-
-    public boolean isCancelled() {
-        return event.isCancelled();
-    }
-
-    public void setCancelled(boolean cancel) {
-        changed = (cancel);
-        event.setCancelled(cancel);
-    }
-
-    public Player getPlayer() {
-        return event.getPlayer();
-    }
-
-    @Override
-    public HandlerList getHandlers() {
-        return handlers;
     }
 }
