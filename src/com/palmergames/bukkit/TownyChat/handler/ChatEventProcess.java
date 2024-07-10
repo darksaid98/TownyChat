@@ -18,8 +18,8 @@ public class ChatEventProcess {
         Player p = e.getPlayer();
 
         // Save the message
-        Component messageContent = e.originalMessage();
-        String messageContentString = Adventure.plainText().serialize(messageContent);
+        final Component originalMessage = e.originalMessage();
+        final String originalMessageString = Adventure.plainText().serialize(originalMessage);
 
         // Check if the player is muted by essentials
         if (isEssentialsMuted(p)) {
@@ -27,7 +27,7 @@ public class ChatEventProcess {
             return;
         }
 
-        final boolean userForcedGlobal = ChatSettings.isExclamationPoint() && messageContentString.startsWith("!");
+        final boolean userForcedGlobal = ChatSettings.isExclamationPoint() && originalMessageString.startsWith("!");
 
         // If the player is using /g or /n to send their message
         final boolean isDirectedChat = directedChat.containsKey(p);

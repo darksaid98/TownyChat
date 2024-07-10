@@ -98,7 +98,7 @@ public class StandardChannel extends Channel {
                         ),
                         StandardTags.defaults(),
                         TagResolver.resolver( // TODO Parse color codes, the player has permissions to use
-                            "msg", Tag.inserting(e.originalMessage())
+                            "msg", Tag.inserting(e.message())
                         )
                     )
                     .build()
@@ -122,7 +122,7 @@ public class StandardChannel extends Channel {
         );
 
         // If the server has marked this Channel as hooked, fire the AsyncChatHookEvent.
-        // If the e is cancelled, cancel the chat entirely.
+        // If the event is cancelled, cancel the chat entirely.
         // Fires its own sendSpyMessage().
         if (isHooked())
             if (!sendOffHookedMessage(e, channelType, recipients)) {
