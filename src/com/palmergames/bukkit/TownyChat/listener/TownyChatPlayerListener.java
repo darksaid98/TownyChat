@@ -56,7 +56,7 @@ public class TownyChatPlayerListener implements Listener {
         plugin.getChannelsHandler().getAllChannels().values().forEach(channel -> channel.forgetPlayer(p));
     }
 
-    @EventHandler(priority = EventPriority.LOW)
+    @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerChat(AsyncChatEvent e) {
         ChatEventProcess.processChatEvent(e, directedChat);
     }

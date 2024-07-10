@@ -15,6 +15,9 @@ import java.util.WeakHashMap;
 
 public class ChatEventProcess {
     public static void processChatEvent(AsyncChatEvent e, WeakHashMap<Player, String> directedChat) {
+        if (e.isCancelled())
+            return;
+
         Player p = e.getPlayer();
 
         // Save the message
