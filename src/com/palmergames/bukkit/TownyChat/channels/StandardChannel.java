@@ -107,32 +107,47 @@ public class StandardChannel extends Channel {
 
         // Get recipients
         final Set<Player> recipients = getRecipients(p, town, nation, channelType);
-        final Audience recipientAudience = Audience.audience(recipients);
 
         // Try sending an alone message if the player is alone in a channel.
         trySendingAloneMessage(p, recipients);
 
         // Calculate recipients and set recipients
-        e.message(Component.empty());
+        e.message(finalMessage);
         e.viewers().clear();
-        e.viewers().add(recipientAudience);
-        e.viewers().add(Bukkit.getServer().getConsoleSender());
-        e.renderer(
-            (source, sourceDisplayName, message, viewer) -> finalMessage
-        );
+        e.viewers().add(Audience.audience(recipients));
 
         // If the server has marked this Channel as hooked, fire the AsyncChatHookEvent.
         // If the event is cancelled, cancel the chat entirely.
         // Fires its own sendSpyMessage().
-        if (isHooked())
-            if (!sendOffHookedMessage(e, channelType, recipients)) {
+        if (isHooked()) {
+            AsyncChatHookEvent hookEvent = new AsyncChatHookEvent(e, this, recipients);
+            Bukkit.getServer().getPluginManager().callEvent(hookEvent);
+            if (hookEvent.isCancelled()) {
                 e.setCancelled(true);
                 return;
             }
 
-        // Send spy message if this was never hooked.
-        if (!isHooked())
+            e.viewers().clear();
+            e.viewers().add(Audience.audience(hookEvent.getRecipients()));
+
+            /*
+             * Send spy message before another plugin changes any of the recipients, so we
+             * know which people can see it.
+             */
             sendSpyMessage(e, channelType, recipients);
+        }
+
+        // Add console as listener and set custom rendered for message
+        e.viewers().add(Bukkit.getServer().getConsoleSender());
+        e.renderer(
+            (source, sourceDisplayName, message, viewer) -> e.message()
+        );
+
+        /*
+         * Send spy message before another plugin changes any of the recipients, so we
+         * know which people can see it.
+         */
+        sendSpyMessage(e, channelType, recipients);
 
         // Play the channel sound, if used.
         tryPlayChannelSound(recipients);
@@ -218,34 +233,6 @@ public class StandardChannel extends Channel {
         if (ChatSettings.isUsingAloneMessage() &&
             recipients.stream().filter(sender::canSee).count() < 2) // sender will usually be a recipient of their own message.
             TownyMessaging.sendMessage(sender, ChatSettings.getUsingAloneMessageString());
-    }
-
-    /**
-     * Send off TownyChat's {@link AsyncChatHookEvent} which allows other plugins to
-     * cancel or modify TownyChat's messaging.
-     *
-     * @param e       {@link AsyncChatEvent} that has caused a message.
-     * @param channelType {@link ChannelTypes} which this message is being sent through.
-     * @return false if the AsyncChatHookEvent is cancelled.
-     */
-    private boolean sendOffHookedMessage(AsyncChatEvent e, ChannelTypes channelType, Set<Player> recipients) {
-        AsyncChatHookEvent hookEvent = new AsyncChatHookEvent(e, this, recipients);
-        Bukkit.getServer().getPluginManager().callEvent(hookEvent);
-        if (hookEvent.isCancelled())
-            return false;
-
-        /*
-         * Send spy message before another plugin changes any of the recipients, so we
-         * know which people can see it.
-         */
-        sendSpyMessage(e, channelType, recipients);
-
-        if (hookEvent.isChanged()) {
-            e.message(hookEvent.message());
-            e.viewers().clear();
-            e.viewers().addAll(hookEvent.getRecipients());
-        }
-        return true;
     }
 
     /**

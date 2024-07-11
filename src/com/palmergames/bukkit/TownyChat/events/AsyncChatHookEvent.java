@@ -32,6 +32,7 @@ import java.util.Set;
  */
 public class AsyncChatHookEvent extends Event implements Cancellable {
     private static final HandlerList HANDLER_LIST = new HandlerList();
+    private String legacyMessage;
     private boolean cancelled;
 
     public static HandlerList getHandlerList() {
@@ -50,20 +51,18 @@ public class AsyncChatHookEvent extends Event implements Cancellable {
 
     @Override
     public void setCancelled(boolean cancelled) {
-        changed = cancelled;
         this.cancelled = cancelled;
     }
 
     private final AsyncChatEvent event;
-    private boolean changed;
     private final Channel channel;
     private final Set<Player> recipients;
 
-    public AsyncChatHookEvent(AsyncChatEvent event, Channel channel, Set<Player> recipients) {
-        super(event.isAsynchronous());
-        this.event = event;
-        this.changed = false;
-        this.cancelled = event.isCancelled();
+    public AsyncChatHookEvent(AsyncChatEvent e, Channel channel, Set<Player> recipients) {
+        super(e.isAsynchronous());
+        this.event = e;
+        this.cancelled = e.isCancelled();
+        this.legacyMessage = Adventure.plainText().serialize(message());
 
         this.channel = channel;
         this.recipients = recipients;
@@ -84,12 +83,12 @@ public class AsyncChatHookEvent extends Event implements Cancellable {
 
     @Deprecated
     public String getMessage() {
-        return Adventure.plainText().serialize(message());
+        return legacyMessage;
     }
 
     @Deprecated
     public void setMessage(String message) {
-        message(ColorParser.of(message).parseLegacy().build());
+        legacyMessage = message;
     }
 
     public Component message() {
@@ -97,7 +96,6 @@ public class AsyncChatHookEvent extends Event implements Cancellable {
     }
 
     public void message(Component message) {
-        changed = true;
         event.message(message);
     }
 
@@ -106,7 +104,6 @@ public class AsyncChatHookEvent extends Event implements Cancellable {
     }
 
     public void setRecipients(Set<Player> recipients) {
-        changed = true;
         this.recipients.clear();
         this.recipients.addAll(recipients);
     }
@@ -122,14 +119,16 @@ public class AsyncChatHookEvent extends Event implements Cancellable {
     /*
      * Returns true if the hooked event was changed
      */
+    @Deprecated(forRemoval = true)
     public boolean isChanged() {
-        return changed;
+        return true;
     }
 
     /*
      * Informs Chat if the event was changed or not
      */
+    @Deprecated(forRemoval = true)
     public void setChanged(boolean changed) {
-        this.changed = changed;
+
     }
 }
